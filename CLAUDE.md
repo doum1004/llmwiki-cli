@@ -88,7 +88,7 @@ See `docs/phase-{1-5}.md` for detailed tracking. Current status:
 - Phase 2: **COMPLETE** — read, write, append, list, search
 - Phase 3: **COMPLETE** — index, log, commit, history, diff
 - Phase 4: **COMPLETE** — lint, links, backlinks, orphans, status
-- Phase 5: Not started — auth, repo, push, pull, sync
+- Phase 5: **COMPLETE** — auth, repo, push, pull, sync
 
 ## Conventions
 

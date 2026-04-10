@@ -57,3 +57,15 @@ export function push(cwd: string, remote = "origin", branch = "main"): Promise<G
 export function pull(cwd: string, remote = "origin", branch = "main"): Promise<GitResult> {
   return run(["pull", remote, branch, "--rebase"], cwd);
 }
+
+export function clone(url: string, dest: string): Promise<GitResult> {
+  return new Promise((resolve) => {
+    execFile("git", ["clone", url, dest], (err, stdout, stderr) => {
+      if (err) {
+        resolve({ ok: false, output: (stdout || stderr || err.message).trim() });
+      } else {
+        resolve({ ok: true, output: stdout.trim() });
+      }
+    });
+  });
+}

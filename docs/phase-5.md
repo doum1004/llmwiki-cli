@@ -1,6 +1,6 @@
 # Phase 5: GitHub Auth + Repo Management
 
-**Status**: NOT STARTED
+**Status**: COMPLETE
 
 **Goal**: User can authenticate with GitHub, create/clone repos, push/pull wikis.
 
@@ -8,15 +8,16 @@
 
 | File | Status | Description |
 |------|--------|-------------|
-| `src/lib/auth.ts` | Pending | GitHub OAuth device flow, token storage at ~/.config/llmwiki/auth.yaml |
-| `src/lib/github.ts` | Pending | GitHub API: listRepos, createRepo, deleteRepo |
-| `src/commands/auth.ts` | Pending | `wiki auth login/status/logout` |
-| `src/commands/repo.ts` | Pending | `wiki repo list/create/clone/connect` |
-| `src/commands/push.ts` | Pending | `wiki push [--wiki <name>]` |
-| `src/commands/pull.ts` | Pending | `wiki pull [--wiki <name>]` |
-| `src/commands/sync.ts` | Pending | `wiki sync [--wiki <name>]` — pull + push |
+| `src/lib/auth.ts` | Done | PAT-based auth, token storage at ~/.config/llmwiki/auth.yaml |
+| `src/lib/github.ts` | Done | GitHub API: listRepos, createRepo |
+| `src/commands/auth.ts` | Done | `wiki auth login/status/logout` |
+| `src/commands/repo.ts` | Done | `wiki repo list/create/clone/connect` |
+| `src/commands/push.ts` | Done | `wiki push` |
+| `src/commands/pull.ts` | Done | `wiki pull` |
+| `src/commands/sync.ts` | Done | `wiki sync` — pull + push |
+| `test/auth.test.ts` | Done | 6 tests passing |
 
-## Commands to Add
+## Commands Added
 
 ```
 wiki auth login
@@ -24,27 +25,30 @@ wiki auth status
 wiki auth logout
 wiki repo list [--all] [--filter]
 wiki repo create <name> [--domain] [--public]
-wiki repo clone [name] [--all] [--filter]
+wiki repo clone [repo-name] [--dir]
 wiki repo connect [wiki-id]
-wiki push [--wiki <name>]
-wiki pull [--wiki <name>]
-wiki sync [--wiki <name>]
+wiki push
+wiki pull
+wiki sync
 ```
 
-## Key Design Decisions
+## Tests
 
-- GitHub OAuth device flow (no client secret needed, public client_id)
-- Token stored at `~/.config/llmwiki/auth.yaml`
-- Git credential helper at `~/.config/llmwiki/git-credential-helper.sh`
+- 6 new tests (auth save/load/clear), all passing
+- 93 total tests across 9 files
+- GitHub API tests skipped (require live network + token)
+
+## Notes
+
+- Uses Personal Access Token (PAT) auth instead of OAuth device flow
+  - Immediately functional, no OAuth App registration required
+  - User creates PAT at github.com/settings/tokens with "repo" scope
+  - OAuth device flow can be added later if needed
+- Token stored at `~/.config/llmwiki/auth.yaml` (respects `LLMWIKI_CONFIG_DIR`)
+- Token validated against GitHub API before saving
 - `repo create` creates private repo named `wiki-<name>` by default
-- `repo clone` auto-detects .llmwiki.yaml; scaffolds if missing
-- All GitHub API calls use `fetch()` with Bearer token
-
-## Prerequisites
-
-- Requires a registered GitHub OAuth App (client_id)
-- Network access (this is the only phase that makes network calls)
-
-## Entry Points to Update
-
-- `bin/wiki.ts` — register new commands, add auth commands to SKIP_RESOLUTION
+- `repo clone` auto-detects .llmwiki.yaml and registers in global registry
+- `repo connect` creates a new GitHub repo and links existing local wiki
+- `push/pull/sync` check for remote before operating
+- Added `clone` function to git.ts
+- `auth` command added to SKIP_RESOLUTION set (no wiki context needed)
