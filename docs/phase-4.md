@@ -1,6 +1,6 @@
 # Phase 4: Lint + Links + Status
 
-**Status**: NOT STARTED
+**Status**: COMPLETE
 
 **Goal**: LLM can check wiki health and navigate the link graph.
 
@@ -8,17 +8,17 @@
 
 | File | Status | Description |
 |------|--------|-------------|
-| `src/lib/link-parser.ts` | Pending | extractWikilinks, buildLinkGraph, LinkGraph interface |
-| `src/lib/frontmatter.ts` | Pending | parseFrontmatter, hasFrontmatter, addFrontmatter |
-| `src/commands/lint.ts` | Pending | `wiki lint [--json]` — broken links, orphans, missing frontmatter, empty pages, index consistency |
-| `src/commands/links.ts` | Pending | `wiki links <path>` — outbound + inbound links |
-| `src/commands/backlinks.ts` | Pending | `wiki backlinks <path>` — inbound only |
-| `src/commands/orphans.ts` | Pending | `wiki orphans` — pages with no inbound links |
-| `src/commands/status.ts` | Pending | `wiki status [--json]` — page counts, link stats, recent activity, git info |
-| `test/lint.test.ts` | Pending | Lint detection tests |
-| `test/links.test.ts` | Pending | Wikilink extraction, graph building |
+| `src/lib/link-parser.ts` | Done | extractWikilinks, buildLinkGraph, wikilink resolution |
+| `src/lib/frontmatter.ts` | Done | parseFrontmatter, hasFrontmatter, addFrontmatter |
+| `src/commands/lint.ts` | Done | `wiki lint [--json]` — broken links, orphans, missing frontmatter, empty pages, index consistency |
+| `src/commands/links.ts` | Done | `wiki links <path>` — outbound + inbound links |
+| `src/commands/backlinks.ts` | Done | `wiki backlinks <path>` — inbound only |
+| `src/commands/orphans.ts` | Done | `wiki orphans` — pages with no inbound links |
+| `src/commands/status.ts` | Done | `wiki status [--json]` — page counts, link stats, recent activity, git info |
+| `test/links.test.ts` | Done | 11 tests passing |
+| `test/lint.test.ts` | Done | 8 tests passing |
 
-## Commands to Add
+## Commands Added
 
 ```
 wiki lint [--json]
@@ -28,14 +28,15 @@ wiki orphans
 wiki status [--json]
 ```
 
-## Key Design Decisions
+## Tests
 
-- Wikilink syntax: `[[target]]` and `[[target|display]]`
-- Wikilink resolution: check exact match, then check with directory prefix (entities/, concepts/, etc.)
+- 19 new tests (11 links + 8 lint/frontmatter), all passing
+- 87 total tests across 8 files
+
+## Notes
+
+- Wikilink resolution: exact path -> wiki/ prefix -> subdirectory scan -> filename match anywhere
 - Orphan detection excludes index.md and log.md
-- Lint checks: broken links, orphans, missing frontmatter, empty pages, index consistency
-- `status` shows: page counts by directory, link stats, recent log entries, git info
-
-## Entry Points to Update
-
-- `bin/wiki.ts` — register new commands
+- Lint checks: broken links, orphans, missing frontmatter, empty pages, index consistency (both directions)
+- Status shows: page counts by directory, link stats, recent log entries, git commit count and remote status
+- All structured output supports `--json`

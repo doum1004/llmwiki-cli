@@ -42,3 +42,13 @@ wiki search <query> [--limit N] [--all] [--json]
 - Search uses term-frequency scoring with word-boundary matching
 - Search `--all` iterates all registered wikis
 - WikiManager normalizes paths to forward slashes on Windows
+
+## Possible Enhancements
+
+Search is currently keyword-based (term-frequency). These enhancements stay within the "no LLM API" constraint:
+
+- **Fuzzy matching** — handle typos and stemming
+- **BM25 scoring** — better ranking than raw term frequency
+- **Frontmatter/tag search** — filter by tags, date ranges (`wiki search --tag transformers`)
+- **Regex search** — `wiki search --regex "transform(er|s)"`
+- **Semantic search** — not possible in the CLI (requires embeddings), but the LLM agent can orchestrate it by generating search terms from natural language and calling `wiki search` with those terms. The CLI stays dumb, the LLM stays smart.

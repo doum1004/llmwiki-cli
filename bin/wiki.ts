@@ -14,6 +14,11 @@ import { makeLogCommand } from "../src/commands/log-cmd.ts";
 import { makeCommitCommand } from "../src/commands/commit.ts";
 import { makeHistoryCommand } from "../src/commands/history.ts";
 import { makeDiffCommand } from "../src/commands/diff.ts";
+import { makeLintCommand } from "../src/commands/lint.ts";
+import { makeLinksCommand } from "../src/commands/links.ts";
+import { makeBacklinksCommand } from "../src/commands/backlinks.ts";
+import { makeOrphansCommand } from "../src/commands/orphans.ts";
+import { makeStatusCommand } from "../src/commands/status.ts";
 import { resolveWiki } from "../src/lib/resolver.ts";
 import type { GlobalOptions } from "../src/types.ts";
 
@@ -41,6 +46,11 @@ program.addCommand(makeLogCommand());
 program.addCommand(makeCommitCommand());
 program.addCommand(makeHistoryCommand());
 program.addCommand(makeDiffCommand());
+program.addCommand(makeLintCommand());
+program.addCommand(makeLinksCommand());
+program.addCommand(makeBacklinksCommand());
+program.addCommand(makeOrphansCommand());
+program.addCommand(makeStatusCommand());
 
 // Resolve wiki context for commands that need it
 const SKIP_RESOLUTION = new Set(["init", "registry", "use"]);
