@@ -9,6 +9,11 @@ import { makeWriteCommand } from "../src/commands/write.ts";
 import { makeAppendCommand } from "../src/commands/append.ts";
 import { makeListCommand } from "../src/commands/list.ts";
 import { makeSearchCommand } from "../src/commands/search.ts";
+import { makeIndexCommand } from "../src/commands/index-cmd.ts";
+import { makeLogCommand } from "../src/commands/log-cmd.ts";
+import { makeCommitCommand } from "../src/commands/commit.ts";
+import { makeHistoryCommand } from "../src/commands/history.ts";
+import { makeDiffCommand } from "../src/commands/diff.ts";
 import { resolveWiki } from "../src/lib/resolver.ts";
 import type { GlobalOptions } from "../src/types.ts";
 
@@ -31,6 +36,11 @@ program.addCommand(makeWriteCommand());
 program.addCommand(makeAppendCommand());
 program.addCommand(makeListCommand());
 program.addCommand(makeSearchCommand());
+program.addCommand(makeIndexCommand());
+program.addCommand(makeLogCommand());
+program.addCommand(makeCommitCommand());
+program.addCommand(makeHistoryCommand());
+program.addCommand(makeDiffCommand());
 
 // Resolve wiki context for commands that need it
 const SKIP_RESOLUTION = new Set(["init", "registry", "use"]);

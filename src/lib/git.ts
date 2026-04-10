@@ -9,7 +9,7 @@ function run(args: string[], cwd: string): Promise<GitResult> {
   return new Promise((resolve) => {
     execFile("git", args, { cwd }, (err, stdout, stderr) => {
       if (err) {
-        resolve({ ok: false, output: (stderr || err.message).trim() });
+        resolve({ ok: false, output: (stdout || stderr || err.message).trim() });
       } else {
         resolve({ ok: true, output: stdout.trim() });
       }
@@ -31,6 +31,10 @@ export function commit(cwd: string, message: string): Promise<GitResult> {
 
 export function log(cwd: string, limit = 20): Promise<GitResult> {
   return run(["log", "--oneline", "-n", String(limit)], cwd);
+}
+
+export function logFile(cwd: string, path: string, limit = 20): Promise<GitResult> {
+  return run(["log", "--oneline", "-n", String(limit), "--", path], cwd);
 }
 
 export function diff(cwd: string, ref?: string): Promise<GitResult> {

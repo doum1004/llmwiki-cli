@@ -86,7 +86,7 @@ bun run typecheck        # TypeScript check
 See `docs/phase-{1-5}.md` for detailed tracking. Current status:
 - Phase 1: **COMPLETE** — init, registry, use
 - Phase 2: **COMPLETE** — read, write, append, list, search
-- Phase 3: Not started — index, log, commit, history, diff
+- Phase 3: **COMPLETE** — index, log, commit, history, diff
 - Phase 4: Not started — lint, links, backlinks, orphans, status
 - Phase 5: Not started — auth, repo, push, pull, sync
 
