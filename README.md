@@ -13,22 +13,25 @@ Inspired by [Andrej Karpathy's LLM Wiki](https://gist.github.com/karpathy/442a6b
 
 ## Overview
 
-The CLI is the hands — it reads, writes, searches, and manages wiki files. The LLM is the brain — it decides what to create, update, and connect.
+The CLI is the hands -- it reads, writes, searches, and manages wiki files. The LLM is the brain -- it decides what to create, update, and connect.
 
 ```
 LLM Agent (Claude Code / Codex)
-│
-│ shells out to:
-│   $ wiki init my-wiki --domain "machine learning"
-│   $ wiki write wiki/concepts/attention.md <<'EOF' ... EOF
-│   $ wiki index add "concepts/attention.md" "Overview of attention"
-│   $ wiki commit "ingest: attention paper"
-│
-▼
+|
+| shells out to:
+|   $ wiki init my-wiki --domain "machine learning"
+|   $ wiki write wiki/concepts/attention.md <<'EOF' ... EOF
+|   $ wiki index add "concepts/attention.md" "Overview of attention"
+|   $ wiki search "scaling laws"
+|   $ wiki lint
+|   $ wiki commit "ingest: attention paper"
+|   $ wiki push
+|
+v
 wiki CLI (pure filesystem + git)
-│
-▼
-Wiki Repo (markdown files + .git)
+|
+v
+Wiki Repo (markdown files + .git + GitHub)
 ```
 
 **Key principle**: The CLI never calls any LLM API. It is a pure filesystem + git tool.
@@ -47,11 +50,25 @@ This gives you two commands: `wiki` (primary, 4 chars) and `llmwiki` (fallback i
 # Create a new wiki
 wiki init my-wiki --name "My Notes" --domain "research"
 
-# List your wikis
-wiki registry
+# Write a page
+wiki write wiki/concepts/attention.md <<'EOF'
+---
+title: Attention Mechanism
+created: 2025-01-20
+tags: [transformers, NLP]
+---
+The attention mechanism allows models to focus on relevant parts of the input.
+See also [[transformers]] and [[self-attention]].
+EOF
 
-# Set the active wiki
-wiki use my-wiki
+# Add to index and log
+wiki index add "concepts/attention.md" "Overview of attention mechanisms"
+wiki log append ingest "Attention mechanism page"
+
+# Search, lint, commit
+wiki search "attention"
+wiki lint
+wiki commit "ingest: attention mechanism"
 ```
 
 ## Wiki Structure
@@ -83,7 +100,7 @@ wiki registry                                       # List all wikis
 wiki use [wiki-id]                                  # Set active wiki
 ```
 
-### Reading & Writing (Phase 2)
+### Reading & Writing
 ```bash
 wiki read <path>                                    # Print page to stdout
 wiki write <path>                                   # Write stdin to page
@@ -92,7 +109,7 @@ wiki list [dir] [--tree] [--json]                   # List pages
 wiki search <query> [--limit N] [--all] [--json]    # Search pages
 ```
 
-### Index & Log (Phase 3)
+### Index & Log
 ```bash
 wiki index show                                     # Print master index
 wiki index add <path> <summary>                     # Add entry to index
@@ -104,7 +121,7 @@ wiki history [path] [--last N]                      # Git log
 wiki diff [ref]                                     # Git diff
 ```
 
-### Health & Links (Phase 4)
+### Health & Links
 ```bash
 wiki lint [--json]                                  # Health check
 wiki links <path>                                   # Outbound + inbound links
@@ -113,11 +130,15 @@ wiki orphans                                        # Pages with no inbound link
 wiki status [--json]                                # Wiki overview stats
 ```
 
-### GitHub Sync (Phase 5)
+### GitHub Sync
 ```bash
-wiki auth login                                     # GitHub device flow auth
-wiki repo create <name> [--public]                  # Create repo + wiki
-wiki repo clone [name]                              # Clone repo + register
+wiki auth login                                     # Authenticate with GitHub PAT
+wiki auth status                                    # Show auth status
+wiki auth logout                                    # Remove credentials
+wiki repo list [--all] [--filter]                   # List your GitHub repos
+wiki repo create <name> [--domain] [--public]       # Create repo + init wiki
+wiki repo clone [name] [--dir]                      # Clone repo + register
+wiki repo connect [wiki-id]                         # Connect wiki to new GitHub repo
 wiki push                                           # Git push
 wiki pull                                           # Git pull
 wiki sync                                           # Pull + push
@@ -125,14 +146,16 @@ wiki sync                                           # Pull + push
 
 ## How LLM Agents Use This
 
-The generated `SCHEMA.md` in each wiki contains complete instructions. Here's the typical workflow:
+The generated `SCHEMA.md` in each wiki contains complete instructions. Here are the typical workflows:
 
 ### Ingest a Source
 ```bash
+# Save raw source
 wiki write raw/paper.md <<'EOF'
 <paste full text of paper>
 EOF
 
+# Create structured summary
 wiki write wiki/sources/attention-paper.md <<'EOF'
 ---
 title: Attention Is All You Need
@@ -141,8 +164,10 @@ tags: [transformers, attention, NLP]
 source: https://arxiv.org/abs/1706.03762
 ---
 Summary of the attention paper...
+Links to [[transformers]] and [[self-attention]].
 EOF
 
+# Update bookkeeping
 wiki index add "sources/attention-paper.md" "Attention Is All You Need (2017)"
 wiki log append ingest "Attention paper"
 wiki commit "ingest: attention paper"
@@ -152,7 +177,24 @@ wiki commit "ingest: attention paper"
 ```bash
 wiki search "attention mechanism"
 wiki read wiki/concepts/attention.md
+wiki links wiki/concepts/attention.md    # see related pages
 wiki log append query "How does multi-head attention work?"
+```
+
+### Maintain Wiki Health
+```bash
+wiki lint                  # find broken links, orphans, missing frontmatter
+wiki orphans               # pages nobody links to
+wiki status                # overview stats
+wiki commit "maintenance: fix lint issues"
+```
+
+### Sync to GitHub
+```bash
+wiki auth login            # one-time setup with GitHub PAT
+wiki repo create research  # creates private wiki-research repo
+wiki push                  # after making changes
+wiki sync                  # pull + push
 ```
 
 ## Multi-Wiki Support
@@ -165,6 +207,7 @@ wiki init ~/wikis/personal --name personal --domain "personal notes"
 wiki registry        # lists both
 wiki use ml          # switch active wiki
 wiki --wiki personal read wiki/index.md   # target specific wiki
+wiki search "neural networks" --all       # search across all wikis
 ```
 
 **Wiki resolution order**: `--wiki` flag > cwd `.llmwiki.yaml` > walk up directories > registry default.
@@ -172,15 +215,16 @@ wiki --wiki personal read wiki/index.md   # target specific wiki
 ## Requirements
 
 - Node.js >= 18 (or Bun)
-- Git (optional, for version control features)
+- Git (optional but recommended for version control)
 
 ## Development
 
 ```bash
-git clone https://github.com/user/llmwiki-cli
+git clone https://github.com/doum1004/llmwiki-cli
 cd llmwiki-cli
 bun install
-bun test
+bun test            # 93 tests
+bun run build       # bundle to dist/wiki.js
 bun run dev -- --help
 ```
 
