@@ -15,7 +15,7 @@ export function makeLogCommand(): Command {
       this: Command,
       options: { last?: string; type?: string },
     ) {
-      const ctx: WikiContext = this.parent!.optsWithGlobals().wikiContext;
+      const ctx: WikiContext = this.optsWithGlobals().wikiContext;
       const mgr = new LogManager(join(ctx.root, "wiki/log.md"));
       const entries = await mgr.show({
         last: options.last ? parseInt(options.last, 10) : undefined,
@@ -39,7 +39,7 @@ export function makeLogCommand(): Command {
     .argument("<type>", "entry type (e.g. ingest, query, maintenance)")
     .argument("<message>", "log message")
     .action(async function (this: Command, type: string, message: string) {
-      const ctx: WikiContext = this.parent!.optsWithGlobals().wikiContext;
+      const ctx: WikiContext = this.optsWithGlobals().wikiContext;
       const mgr = new LogManager(join(ctx.root, "wiki/log.md"));
       await mgr.append(type, message);
       console.log(`Logged: ${type} | ${message}`);
