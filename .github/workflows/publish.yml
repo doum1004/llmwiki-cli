@@ -1,0 +1,195 @@
+name: Publish to npm
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Version bump type"
+        required: true
+        default: patch
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      note:
+        description: "Release note (optional — shown at the top of the GitHub Release and CHANGELOG)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+  id-token: write
+  packages: write
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Test → Build → Publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      packages: write
+
+    steps:
+      # ── 1. Checkout ─────────────────────────────────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── 2. Set up Bun ───────────────────────────────────────────────
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # ── 3. Install dependencies ─────────────────────────────────────
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      # ── 4. Run tests ────────────────────────────────────────────────
+      - name: Run tests
+        run: bun test
+
+      # ── 5. Bump version ─────────────────────────────────────────────
+      - name: Bump version (${{ inputs.bump }})
+        id: bump
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          NEW_VERSION=$(npm version ${{ inputs.bump }} --no-git-tag-version)
+          echo "new_version=${NEW_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Bumped to ${NEW_VERSION}"
+
+      # ── 6. Build ────────────────────────────────────────────────────
+      - name: Build
+        run: bun run build
+
+      # ── 7a. Publish to npm ──────────────────────────────────────────
+      - name: Set up Node (for npm publish)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org/
+
+      - name: Publish to npm
+        run: npm publish --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # ── 7b. Publish to GitHub Packages ──────────────────────────────
+      - name: Set up Node (for GitHub Packages)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://npm.pkg.github.com
+          scope: '@doum1004'
+
+      - name: Publish to GitHub Packages
+        run: |
+          npm pkg set name='@doum1004/llmwiki-cli'
+          npm publish --access public
+          npm pkg set name='llmwiki-cli'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── 8. Build changelog entry and update CHANGELOG.md ────────────
+      - name: Update CHANGELOG.md
+        id: changelog
+        run: |
+          VERSION=${{ steps.bump.outputs.new_version }}
+          DATE=$(date -u +%Y-%m-%d)
+          NOTE="${{ inputs.note }}"
+
+          PREV_TAG=$(git tag --sort=-version:refname | grep -v "^${VERSION}$" | head -1)
+
+          if [ -z "$PREV_TAG" ]; then
+            LOG=$(git log --pretty=format:"- %s (%h)" HEAD)
+          else
+            LOG=$(git log --pretty=format:"- %s (%h)" "${PREV_TAG}..HEAD")
+          fi
+
+          {
+            echo "log<<EOF"
+            echo "$LOG"
+            echo "EOF"
+            echo "prev_tag=${PREV_TAG}"
+            echo "date=${DATE}"
+          } >> "$GITHUB_OUTPUT"
+
+          ENTRY_FILE=$(mktemp)
+          {
+            echo "## ${VERSION} — ${DATE}"
+            echo ""
+            if [ -n "$NOTE" ]; then
+              echo "> ${NOTE}"
+              echo ""
+            fi
+            echo "### Changes"
+            echo ""
+            echo "$LOG"
+            echo ""
+            if [ -n "$PREV_TAG" ]; then
+              REPO_URL=$(git remote get-url origin \
+                | sed 's/\.git$//' \
+                | sed 's|git@github\.com:|https://github.com/|')
+              echo "**Full diff:** [${PREV_TAG}...${VERSION}](${REPO_URL}/compare/${PREV_TAG}...${VERSION})"
+            fi
+            echo ""
+            echo "---"
+            echo ""
+          } > "$ENTRY_FILE"
+
+          MARKER="<!-- New entries are prepended automatically by the publish workflow -->"
+          awk -v entry_file="$ENTRY_FILE" -v marker="$MARKER" '
+            $0 == marker {
+              print
+              print ""
+              while ((getline line < entry_file) > 0) print line
+              next
+            }
+            { print }
+          ' CHANGELOG.md > CHANGELOG.md.tmp
+
+          mv CHANGELOG.md.tmp CHANGELOG.md
+          rm -f "$ENTRY_FILE"
+
+      # ── 9. Commit version bump + CHANGELOG + push tag ────────────────
+      - name: Commit and push
+        run: |
+          VERSION=${{ steps.bump.outputs.new_version }}
+
+          git add package.json CHANGELOG.md
+          git commit -m "chore: release ${VERSION}"
+          git tag "${VERSION}"
+          git push origin HEAD:${{ github.ref_name }} --follow-tags
+
+      # ── 10. Create GitHub Release ────────────────────────────────────
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.bump.outputs.new_version }}
+          name: ${{ steps.bump.outputs.new_version }}
+          body: |
+            ${{ inputs.note && format('> {0}', inputs.note) || '' }}
+
+            ## What's changed
+            ${{ steps.changelog.outputs.log || '_No commits found._' }}
+
+            ## Install
+            ```sh
+            npm install -g llmwiki-cli
+            # or
+            npx llmwiki-cli --help
+            ```
+
+            **Full diff:** ${{ steps.changelog.outputs.prev_tag && format('[{0}...{1}](../../compare/{0}...{2})', steps.changelog.outputs.prev_tag, steps.bump.outputs.new_version, steps.bump.outputs.new_version) || '_first release_' }}
+          draft: false
+          prerelease: false
