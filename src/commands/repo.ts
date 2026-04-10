@@ -3,6 +3,7 @@ import { resolve, basename } from "path";
 import { homedir } from "os";
 import { listRepos, createRepo } from "../lib/github.ts";
 import { loadAuth } from "../lib/auth.ts";
+import { promptUser } from "../lib/prompt.ts";
 import { loadConfig } from "../lib/config.ts";
 import { addToRegistry } from "../lib/registry.ts";
 import * as git from "../lib/git.ts";
@@ -126,7 +127,7 @@ export function makeRepoCommand(): Command {
         });
         console.log();
 
-        const answer = prompt(`Select repo (1-${repos.length}): `);
+        const answer = await promptUser(`Select repo (1-${repos.length}): `);
         if (!answer) return;
         const idx = parseInt(answer, 10) - 1;
         if (isNaN(idx) || idx < 0 || idx >= repos.length) {

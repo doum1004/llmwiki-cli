@@ -1,5 +1,6 @@
 import { loadRegistry } from "./registry.ts";
 import type { RegistryEntry } from "../types.ts";
+import { promptUser } from "./prompt.ts";
 
 export async function pickWiki(): Promise<
   (RegistryEntry & { id: string }) | null
@@ -20,7 +21,7 @@ export async function pickWiki(): Promise<
   });
   console.log();
 
-  const answer = prompt(`Select wiki (1-${entries.length}): `);
+  const answer = await promptUser(`Select wiki (1-${entries.length}): `);
   if (!answer) return null;
 
   const index = parseInt(answer, 10) - 1;

@@ -1,5 +1,6 @@
 import { Command } from "commander";
 import { loadAuth, saveAuth, clearAuth, validateToken } from "../lib/auth.ts";
+import { promptUser } from "../lib/prompt.ts";
 
 export function makeAuthCommand(): Command {
   const cmd = new Command("auth").description("Manage GitHub authentication");
@@ -12,7 +13,7 @@ export function makeAuthCommand(): Command {
       console.log("Create one at: https://github.com/settings/tokens");
       console.log('Required scope: "repo"\n');
 
-      const token = prompt("Token: ");
+      const token = await promptUser("Token: ");
       if (!token) {
         console.error("No token provided.");
         process.exit(1);
