@@ -4,6 +4,11 @@ import { Command } from "commander";
 import { makeInitCommand } from "../src/commands/init.ts";
 import { makeRegistryCommand } from "../src/commands/registry.ts";
 import { makeUseCommand } from "../src/commands/use.ts";
+import { makeReadCommand } from "../src/commands/read.ts";
+import { makeWriteCommand } from "../src/commands/write.ts";
+import { makeAppendCommand } from "../src/commands/append.ts";
+import { makeListCommand } from "../src/commands/list.ts";
+import { makeSearchCommand } from "../src/commands/search.ts";
 import { resolveWiki } from "../src/lib/resolver.ts";
 import type { GlobalOptions } from "../src/types.ts";
 
@@ -19,6 +24,13 @@ program
 program.addCommand(makeInitCommand());
 program.addCommand(makeRegistryCommand());
 program.addCommand(makeUseCommand());
+
+// Commands that require wiki resolution
+program.addCommand(makeReadCommand());
+program.addCommand(makeWriteCommand());
+program.addCommand(makeAppendCommand());
+program.addCommand(makeListCommand());
+program.addCommand(makeSearchCommand());
 
 // Resolve wiki context for commands that need it
 const SKIP_RESOLUTION = new Set(["init", "registry", "use"]);
