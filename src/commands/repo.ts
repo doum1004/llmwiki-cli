@@ -64,10 +64,16 @@ export function makeRepoCommand(): Command {
         const repoName = `wiki-${name}`;
         console.log(`Creating GitHub repo: ${repoName}...`);
 
-        const repo = await createRepo(repoName, {
-          private: !options.public,
-          description: `LLM Wiki: ${name} (${options.domain})`,
-        });
+        let repo;
+        try {
+          repo = await createRepo(repoName, {
+            private: !options.public,
+            description: `LLM Wiki: ${name} (${options.domain})`,
+          });
+        } catch (err: any) {
+          console.error(err.message);
+          process.exit(1);
+        }
 
         console.log(`Created: ${repo.html_url}`);
 
@@ -91,12 +97,13 @@ export function makeRepoCommand(): Command {
 
         // Add remote and push
         await git.addRemote(localDir, "origin", repo.ssh_url);
-        const pushResult = await git.push(localDir);
+        const branch = await git.currentBranch(localDir);
+        const pushResult = await git.push(localDir, "origin", branch);
         if (pushResult.ok) {
           console.log("Pushed to GitHub.");
         } else {
           console.error(`Warning: push failed: ${pushResult.output}`);
-          console.log(`You can push manually: cd ${localDir} && git push -u origin main`);
+          console.log(`You can push manually: cd ${localDir} && git push -u origin ${branch}`);
         }
       },
     );
@@ -202,19 +209,26 @@ export function makeRepoCommand(): Command {
       const repoName = `wiki-${ctx.config.name}`;
       console.log(`Creating GitHub repo: ${repoName}...`);
 
-      const repo = await createRepo(repoName, {
-        private: true,
-        description: `LLM Wiki: ${ctx.config.name} (${ctx.config.domain})`,
-      });
+      let repo;
+      try {
+        repo = await createRepo(repoName, {
+          private: true,
+          description: `LLM Wiki: ${ctx.config.name} (${ctx.config.domain})`,
+        });
+      } catch (err: any) {
+        console.error(err.message);
+        process.exit(1);
+      }
 
       await git.addRemote(ctx.root, "origin", repo.ssh_url);
-      const pushResult = await git.push(ctx.root);
+      const branch = await git.currentBranch(ctx.root);
+      const pushResult = await git.push(ctx.root, "origin", branch);
 
       if (pushResult.ok) {
         console.log(`Connected and pushed to ${repo.html_url}`);
       } else {
         console.error(`Remote added but push failed: ${pushResult.output}`);
-        console.log("Try: git push -u origin main");
+        console.log(`Try: git push -u origin ${branch}`);
       }
     });
 

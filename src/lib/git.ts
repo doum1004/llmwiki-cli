@@ -41,6 +41,11 @@ export function diff(cwd: string, ref?: string): Promise<GitResult> {
   return ref ? run(["show", ref], cwd) : run(["diff"], cwd);
 }
 
+export async function currentBranch(cwd: string): Promise<string> {
+  const result = await run(["rev-parse", "--abbrev-ref", "HEAD"], cwd);
+  return result.ok ? result.output : "main";
+}
+
 export async function hasRemote(cwd: string): Promise<boolean> {
   const result = await run(["remote"], cwd);
   return result.ok && result.output.length > 0;
@@ -51,7 +56,7 @@ export function addRemote(cwd: string, name: string, url: string): Promise<GitRe
 }
 
 export function push(cwd: string, remote = "origin", branch = "main"): Promise<GitResult> {
-  return run(["push", remote, branch], cwd);
+  return run(["push", "-u", remote, branch], cwd);
 }
 
 export function pull(cwd: string, remote = "origin", branch = "main"): Promise<GitResult> {

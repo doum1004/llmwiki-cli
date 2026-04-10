@@ -13,7 +13,8 @@ export function makePushCommand(): Command {
         process.exit(1);
       }
 
-      const result = await git.push(ctx.root);
+      const branch = await git.currentBranch(ctx.root);
+      const result = await git.push(ctx.root, "origin", branch);
       if (!result.ok) {
         console.error(`Push failed: ${result.output}`);
         process.exit(1);

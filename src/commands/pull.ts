@@ -13,7 +13,8 @@ export function makePullCommand(): Command {
         process.exit(1);
       }
 
-      const result = await git.pull(ctx.root);
+      const branch = await git.currentBranch(ctx.root);
+      const result = await git.pull(ctx.root, "origin", branch);
       if (!result.ok) {
         console.error(`Pull failed: ${result.output}`);
         process.exit(1);

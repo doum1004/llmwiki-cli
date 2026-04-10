@@ -13,8 +13,10 @@ export function makeSyncCommand(): Command {
         process.exit(1);
       }
 
+      const branch = await git.currentBranch(ctx.root);
+
       console.log("Pulling...");
-      const pullResult = await git.pull(ctx.root);
+      const pullResult = await git.pull(ctx.root, "origin", branch);
       if (!pullResult.ok) {
         console.error(`Pull failed: ${pullResult.output}`);
         process.exit(1);
@@ -22,7 +24,7 @@ export function makeSyncCommand(): Command {
       console.log(pullResult.output || "Already up to date.");
 
       console.log("Pushing...");
-      const pushResult = await git.push(ctx.root);
+      const pushResult = await git.push(ctx.root, "origin", branch);
       if (!pushResult.ok) {
         console.error(`Push failed: ${pushResult.output}`);
         process.exit(1);

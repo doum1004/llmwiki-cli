@@ -68,8 +68,20 @@ export async function createRepo(
   });
 
   if (!res.ok) {
-    const err = (await res.json()) as { message: string };
-    throw new Error(`Failed to create repo: ${err.message}`);
+    const err = (await res.json()) as { message: string; errors?: { message: string }[] };
+    if (res.status === 422 && err.message?.includes("name already exists")) {
+      throw new Error(
+        `Repository "${name}" already exists. Delete it first with:\n  gh repo delete ${name} --yes\nOr use a different name.`,
+      );
+    }
+    if (res.status === 401) {
+      throw new Error('Authentication failed. Run "wiki auth login" to re-authenticate.');
+    }
+    if (res.status === 403) {
+      throw new Error("Permission denied. Your token may lack the 'repo' scope.");
+    }
+    const detail = err.errors?.map((e) => e.message).join(", ") ?? err.message;
+    throw new Error(`Failed to create repo (${res.status}): ${detail}`);
   }
 
   return (await res.json()) as GitHubRepo;
