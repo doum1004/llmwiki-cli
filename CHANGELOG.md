@@ -2,6 +2,17 @@
 
 <!-- New entries are prepended automatically by the publish workflow -->
 
+## v0.1.3 — 2026-04-10
+
+### Changes
+
+- Phase 4: Lint + Links + Status (6b05447)
+
+**Full diff:** [v0.1.2...v0.1.3](https://github.com/doum1004/llmwiki-cli/compare/v0.1.2...v0.1.3)
+
+---
+
+
 ## v0.1.2 — 2026-04-10
 
 ### Changes
