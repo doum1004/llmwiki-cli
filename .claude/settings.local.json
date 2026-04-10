@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:bun.com)",
+      "WebFetch(domain:tj.github.io)",
+      "WebFetch(domain:www.npmjs.com)",
+      "WebFetch(domain:pmbanugo.me)",
+      "WebFetch(domain:www.jsdocs.io)",
+      "Bash(bun install:*)",
+      "Bash(bunx tsc:*)",
+      "Bash(bun run:*)",
+      "Read(//tmp/**)",
+      "Read(//tmp/llmwiki-test-e2e/**)",
+      "Bash(bun test:*)",
+      "Bash(node:*)",
+      "Bash(npm whoami:*)",
+      "Bash(npm publish:*)",
+      "Bash(chmod +x dist/wiki.js)",
+      "Bash(npm pack:*)",
+      "Bash(npm pkg:*)",
+      "Bash(npm view:*)"
+    ]
+  }
+}
