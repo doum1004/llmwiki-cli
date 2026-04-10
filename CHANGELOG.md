@@ -2,6 +2,18 @@
 
 <!-- New entries are prepended automatically by the publish workflow -->
 
+## v0.1.2 — 2026-04-10
+
+### Changes
+
+- Phase 3: Index + Log + Git Commands (b23e8c0)
+- Phase 2: Read + Write + List + Search (f9c8d47)
+
+**Full diff:** [v0.1.1...v0.1.2](https://github.com/doum1004/llmwiki-cli/compare/v0.1.1...v0.1.2)
+
+---
+
+
 ## v0.1.1 — 2026-04-10
 
 ### Changes
