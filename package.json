@@ -6,6 +6,7 @@
     "type": "git",
     "url": "https://github.com/doum1004/llmwiki-cli"
   },
+  "license": "MIT",
   "type": "module",
   "bin": {
     "wiki": "dist/wiki.js",
