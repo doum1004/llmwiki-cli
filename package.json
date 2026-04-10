@@ -1,0 +1,28 @@
+{
+  "name": "llmwiki-cli",
+  "version": "0.1.0",
+  "description": "CLI tool for LLM agents to build and maintain personal knowledge bases",
+  "type": "module",
+  "bin": {
+    "wiki": "dist/wiki.js",
+    "llmwiki": "dist/wiki.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "bun build bin/wiki.ts --outfile dist/wiki.js --target node",
+    "dev": "bun run bin/wiki.ts",
+    "test": "bun test",
+    "typecheck": "bunx tsc --noEmit",
+    "prepublishOnly": "bun run build"
+  },
+  "dependencies": {
+    "commander": "^12.0.0",
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/js-yaml": "^4.0.9"
+  }
+}
