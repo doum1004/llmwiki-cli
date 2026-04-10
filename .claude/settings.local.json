@@ -20,7 +20,9 @@
       "Bash(chmod +x dist/wiki.js)",
       "Bash(npm pack:*)",
       "Bash(npm pkg:*)",
-      "Bash(npm view:*)"
+      "Bash(npm view:*)",
+      "Bash(gh repo:*)",
+      "Bash(gh auth:*)"
     ]
   }
 }
