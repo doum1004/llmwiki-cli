@@ -2,6 +2,10 @@
   "name": "llmwiki-cli",
   "version": "0.1.0",
   "description": "CLI tool for LLM agents to build and maintain personal knowledge bases",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/doum1004/llmwiki-cli"
+  },
   "type": "module",
   "bin": {
     "wiki": "dist/wiki.js",
