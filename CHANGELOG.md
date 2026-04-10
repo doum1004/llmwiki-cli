@@ -2,6 +2,19 @@
 
 <!-- New entries are prepended automatically by the publish workflow -->
 
+## v0.1.4 — 2026-04-10
+
+### Changes
+
+- feat: add MIT license file and specify license in package.json (140b224)
+- fix: correct punctuation and enhance README clarity (3e6dfca)
+- Phase 5: GitHub Auth + Repo Management (58a1261)
+
+**Full diff:** [v0.1.3...v0.1.4](https://github.com/doum1004/llmwiki-cli/compare/v0.1.3...v0.1.4)
+
+---
+
+
 ## v0.1.3 — 2026-04-10
 
 ### Changes
