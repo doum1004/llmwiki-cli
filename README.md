@@ -228,6 +228,10 @@ bun run build       # bundle to dist/wiki.js
 bun run dev -- --help
 ```
 
+## DATA
+
+![Visitors](https://visitor-badge.laobi.icu/badge?page_id=doum1004.llmwiki-cli)
+
 ## License
 
 MIT
