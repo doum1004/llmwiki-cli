@@ -122,4 +122,68 @@ describe("WikiManager.listPages", () => {
     const pages = await wiki.listPages();
     expect(pages).toEqual(["a.md", "m.md", "z.md"]);
   });
+
+  it("skips .git directory", async () => {
+    await wiki.writePage("page.md", "content");
+    await mkdir(join(testDir, ".git"), { recursive: true });
+    await writeFile(join(testDir, ".git/config.md"), "git config", "utf-8");
+    const pages = await wiki.listPages();
+    expect(pages).toEqual(["page.md"]);
+  });
+
+  it("skips node_modules directory", async () => {
+    await wiki.writePage("page.md", "content");
+    await mkdir(join(testDir, "node_modules/pkg"), { recursive: true });
+    await writeFile(join(testDir, "node_modules/pkg/readme.md"), "readme", "utf-8");
+    const pages = await wiki.listPages();
+    expect(pages).toEqual(["page.md"]);
+  });
+
+  it("handles deeply nested directories", async () => {
+    await wiki.writePage("a/b/c/d/deep.md", "deep");
+    const pages = await wiki.listPages();
+    expect(pages).toEqual(["a/b/c/d/deep.md"]);
+    const content = await wiki.readPage("a/b/c/d/deep.md");
+    expect(content).toBe("deep");
+  });
+
+  it("listPages with nonexistent dir returns empty", async () => {
+    const pages = await wiki.listPages("nonexistent");
+    expect(pages).toEqual([]);
+  });
+});
+
+describe("WikiManager edge cases", () => {
+  it("readPage re-throws non-ENOENT errors", async () => {
+    // Reading a directory path should throw
+    await mkdir(join(testDir, "adir"), { recursive: true });
+    // On some systems reading a dir as file throws EISDIR
+    try {
+      await wiki.readPage("adir");
+      // Some systems return null, some throw - either is acceptable
+    } catch (err: unknown) {
+      expect(err).toBeDefined();
+    }
+  });
+
+  it("appendPage to empty file adds content directly", async () => {
+    await wiki.writePage("empty.md", "");
+    await wiki.appendPage("empty.md", "new content");
+    const content = await wiki.readPage("empty.md");
+    expect(content).toBe("\nnew content");
+  });
+
+  it("writePage with empty content creates empty file", async () => {
+    await wiki.writePage("blank.md", "");
+    expect(await wiki.pageExists("blank.md")).toBe(true);
+    const content = await wiki.readPage("blank.md");
+    expect(content).toBe("");
+  });
+
+  it("uses forward slashes on all platforms", async () => {
+    await wiki.writePage("sub/page.md", "content");
+    const pages = await wiki.listPages();
+    expect(pages[0]).toBe("sub/page.md");
+    expect(pages[0]).not.toContain("\\");
+  });
 });

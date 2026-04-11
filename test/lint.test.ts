@@ -71,3 +71,46 @@ describe("lint checks", () => {
     expect(graph.brokenLinks).toHaveLength(0);
   });
 });
+
+describe("frontmatter edge cases", () => {
+  it("handles frontmatter with no body", () => {
+    const result = parseFrontmatter("---\ntitle: Test\n---\n");
+    expect(result.frontmatter).toEqual({ title: "Test" });
+    expect(result.body).toBe("");
+  });
+
+  it("handles invalid YAML in frontmatter gracefully", () => {
+    const result = parseFrontmatter("---\n: invalid: yaml:\n---\nBody");
+    // Should return null frontmatter on parse error
+    expect(result.frontmatter).toBeNull();
+    expect(result.body).toContain("invalid");
+  });
+
+  it("handles empty frontmatter block", () => {
+    const result = parseFrontmatter("---\n\n---\nBody content");
+    expect(result.body).toBe("Body content");
+  });
+
+  it("hasFrontmatter rejects content that only starts with ---", () => {
+    expect(hasFrontmatter("---\nJust dashes, no closing")).toBe(false);
+  });
+
+  it("addFrontmatter produces parseable output", () => {
+    const data = { title: "My Page", tags: ["a", "b"], draft: true };
+    const result = addFrontmatter("The body.", data);
+    const parsed = parseFrontmatter(result);
+    expect(parsed.frontmatter).toEqual(data);
+    expect(parsed.body.trim()).toBe("The body.");
+  });
+
+  it("parseFrontmatter with complex YAML types", () => {
+    const content = "---\ntitle: Test\ncount: 42\nenabled: true\ntags:\n  - a\n  - b\n---\nBody";
+    const result = parseFrontmatter(content);
+    expect(result.frontmatter).toEqual({
+      title: "Test",
+      count: 42,
+      enabled: true,
+      tags: ["a", "b"],
+    });
+  });
+});

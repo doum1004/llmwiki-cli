@@ -84,4 +84,49 @@ describe("search", () => {
     const results = await search(wiki, "   ");
     expect(results).toEqual([]);
   });
+
+  it("escapes regex special characters without crashing", async () => {
+    await wiki.writePage("code.md", "The function uses array.map for mapping.");
+    // Searching with regex special chars should not throw
+    const results = await search(wiki, "array.map");
+    expect(results).toHaveLength(1);
+    expect(results[0]!.path).toBe("code.md");
+  });
+
+  it("handles dir filter", async () => {
+    await wiki.writePage("wiki/concepts/a.md", "Machine learning concept.");
+    await wiki.writePage("wiki/sources/b.md", "Machine learning paper.");
+    const results = await search(wiki, "machine", { dir: "wiki/concepts" });
+    expect(results).toHaveLength(1);
+    expect(results[0]!.path).toBe("wiki/concepts/a.md");
+  });
+
+  it("snippet adds ellipsis for middle-of-content matches", async () => {
+    const longContent = "A".repeat(200) + " target word " + "B".repeat(200);
+    await wiki.writePage("long.md", longContent);
+    const results = await search(wiki, "target");
+    expect(results).toHaveLength(1);
+    expect(results[0]!.snippet).toContain("...");
+  });
+
+  it("default limit is 10", async () => {
+    for (let i = 0; i < 15; i++) {
+      await wiki.writePage(`p${i}.md`, `Topic keyword in page ${i}.`);
+    }
+    const results = await search(wiki, "keyword");
+    expect(results).toHaveLength(10);
+  });
+
+  it("handles empty wiki", async () => {
+    const results = await search(wiki, "anything");
+    expect(results).toEqual([]);
+  });
+
+  it("search with limit 1 returns top result", async () => {
+    await wiki.writePage("high.md", "attention attention attention");
+    await wiki.writePage("low.md", "attention once");
+    const results = await search(wiki, "attention", { limit: 1 });
+    expect(results).toHaveLength(1);
+    expect(results[0]!.path).toBe("high.md");
+  });
 });

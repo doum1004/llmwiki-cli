@@ -107,4 +107,54 @@ describe("IndexManager", () => {
     expect(content).toContain("## Sources");
     expect(content).toContain("[[sources/new.md]]");
   });
+
+  it("addEntry routes synthesis paths correctly", async () => {
+    await mgr.addEntry("synthesis/overview.md", "Overview doc");
+    const content = await mgr.read();
+    const synthesisIdx = content.indexOf("## Synthesis");
+    const entryIdx = content.indexOf("[[synthesis/overview.md]]");
+    expect(entryIdx).toBeGreaterThan(synthesisIdx);
+  });
+
+  it("addEntry handles duplicate paths", async () => {
+    await mgr.addEntry("concepts/dup.md", "First add");
+    await mgr.addEntry("concepts/dup.md", "Second add");
+    const content = await mgr.read();
+    const matches = content.match(/\[\[concepts\/dup\.md\]\]/g);
+    expect(matches).toHaveLength(2);
+  });
+
+  it("read returns empty string for missing file", async () => {
+    const missingMgr = new IndexManager(join(testDir, "nonexistent.md"));
+    const content = await missingMgr.read();
+    expect(content).toBe("");
+  });
+
+  it("hasEntry is false after removeEntry", async () => {
+    await mgr.addEntry("concepts/temp.md", "Temporary");
+    expect(await mgr.hasEntry("concepts/temp.md")).toBe(true);
+    await mgr.removeEntry("concepts/temp.md");
+    expect(await mgr.hasEntry("concepts/temp.md")).toBe(false);
+  });
+
+  it("removeEntry preserves other entries in same section", async () => {
+    await mgr.addEntry("concepts/keep.md", "Keep this");
+    await mgr.addEntry("concepts/remove.md", "Remove this");
+    await mgr.addEntry("concepts/also-keep.md", "Also keep");
+    await mgr.removeEntry("concepts/remove.md");
+    const content = await mgr.read();
+    expect(content).toContain("[[concepts/keep.md]]");
+    expect(content).toContain("[[concepts/also-keep.md]]");
+    expect(content).not.toContain("[[concepts/remove.md]]");
+  });
+
+  it("categoryFromPath matches case-insensitively", async () => {
+    await mgr.addEntry("Sources/paper.md", "Paper");
+    const content = await mgr.read();
+    const sourcesIdx = content.indexOf("## Sources");
+    const entryIdx = content.indexOf("[[Sources/paper.md]]");
+    const entitiesIdx = content.indexOf("## Entities");
+    expect(entryIdx).toBeGreaterThan(sourcesIdx);
+    expect(entryIdx).toBeLessThan(entitiesIdx);
+  });
 });

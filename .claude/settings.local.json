@@ -23,7 +23,10 @@
       "Bash(npm view:*)",
       "Bash(gh repo:*)",
       "Bash(gh auth:*)",
-      "Bash(grep -E \"\\\\.\\(ts|js\\)$\")"
+      "Bash(grep -E \"\\\\.\\(ts|js\\)$\")",
+      "Bash(wc -l /c/Workspace/Personal/llm-wiki/src/lib/*.ts /c/Workspace/Personal/llm-wiki/src/commands/*.ts)",
+      "Bash(head -5 /c/Workspace/Personal/llm-wiki/src/commands/*.ts)",
+      "Bash(head -10 /c/Workspace/Personal/llm-wiki/src/lib/*.ts)"
     ]
   }
 }

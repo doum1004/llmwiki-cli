@@ -87,4 +87,102 @@ describe("git operations", () => {
     const result = await git.hasRemote(testDir);
     expect(result).toBe(false);
   });
+
+  it("commit message with special characters", async () => {
+    await writeFile(join(testDir, "test.md"), "content", "utf-8");
+    await git.addAll(testDir);
+    const result = await git.commit(testDir, 'fix: handle "quotes" & <angles>');
+    expect(result.ok).toBe(true);
+    const logResult = await git.log(testDir);
+    expect(logResult.output).toContain("fix: handle");
+  });
+
+  it("log respects limit parameter", async () => {
+    for (let i = 0; i < 5; i++) {
+      await writeFile(join(testDir, `f${i}.md`), `content ${i}`, "utf-8");
+      await git.addAll(testDir);
+      await git.commit(testDir, `commit ${i}`);
+    }
+    const result = await git.log(testDir, 2);
+    expect(result.ok).toBe(true);
+    const lines = result.output.split("\n").filter(Boolean);
+    expect(lines).toHaveLength(2);
+  });
+
+  it("log on empty repo returns error", async () => {
+    const result = await git.log(testDir);
+    expect(result.ok).toBe(false);
+  });
+
+  it("diff with ref shows specific commit", async () => {
+    await writeFile(join(testDir, "file.md"), "v1", "utf-8");
+    await git.addAll(testDir);
+    await git.commit(testDir, "first");
+
+    await writeFile(join(testDir, "file.md"), "v2", "utf-8");
+    await git.addAll(testDir);
+    await git.commit(testDir, "second");
+
+    const logResult = await git.log(testDir, 1);
+    const hash = logResult.output.split(" ")[0]!;
+    const result = await git.diff(testDir, hash);
+    expect(result.ok).toBe(true);
+    expect(result.output).toContain("second");
+  });
+
+  it("diff with no changes returns empty output", async () => {
+    await writeFile(join(testDir, "file.md"), "content", "utf-8");
+    await git.addAll(testDir);
+    await git.commit(testDir, "initial");
+
+    const result = await git.diff(testDir);
+    expect(result.ok).toBe(true);
+    expect(result.output).toBe("");
+  });
+
+  it("currentBranch returns branch name", async () => {
+    await writeFile(join(testDir, "init.md"), "init", "utf-8");
+    await git.addAll(testDir);
+    await git.commit(testDir, "initial");
+
+    const branch = await git.currentBranch(testDir);
+    expect(["main", "master"]).toContain(branch);
+  });
+
+  it("addRemote adds a remote", async () => {
+    const result = await git.addRemote(testDir, "origin", "https://example.com/repo.git");
+    expect(result.ok).toBe(true);
+    const hasRemoteNow = await git.hasRemote(testDir);
+    expect(hasRemoteNow).toBe(true);
+  });
+
+  it("addAll stages file deletions", async () => {
+    await writeFile(join(testDir, "delete-me.md"), "to be deleted", "utf-8");
+    await git.addAll(testDir);
+    await git.commit(testDir, "add file");
+
+    const { rm: rmFile } = await import("fs/promises");
+    await rmFile(join(testDir, "delete-me.md"));
+    await git.addAll(testDir);
+    const result = await git.commit(testDir, "delete file");
+    expect(result.ok).toBe(true);
+  });
+
+  it("hasConflicts returns false when no conflicts", async () => {
+    await writeFile(join(testDir, "file.md"), "content", "utf-8");
+    await git.addAll(testDir);
+    await git.commit(testDir, "initial");
+
+    const result = await git.hasConflicts(testDir);
+    expect(result).toBe(false);
+  });
+
+  it("logFile returns empty for file with no commits", async () => {
+    await writeFile(join(testDir, "a.md"), "a", "utf-8");
+    await git.addAll(testDir);
+    await git.commit(testDir, "add a");
+
+    const result = await git.logFile(testDir, "nonexistent.md");
+    expect(result.output).toBe("");
+  });
 });
