@@ -223,7 +223,7 @@ wiki search "neural networks" --all       # search across all wikis
 git clone https://github.com/doum1004/llmwiki-cli
 cd llmwiki-cli
 bun install
-bun test            # 93 tests
+bun test            # 192 tests
 bun run build       # bundle to dist/wiki.js
 bun run dev -- --help
 ```
