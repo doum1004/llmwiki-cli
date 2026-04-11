@@ -16,7 +16,14 @@ async function runWiki(args: string[], input?: string): Promise<{ stdout: string
       stdout: "pipe",
       stderr: "pipe",
       stdin: input ? new Blob([input]) : undefined,
-      env: { ...process.env, LLMWIKI_CONFIG_DIR: configDir },
+      env: {
+        ...process.env,
+        LLMWIKI_CONFIG_DIR: configDir,
+        GIT_AUTHOR_NAME: "Test",
+        GIT_AUTHOR_EMAIL: "test@test.com",
+        GIT_COMMITTER_NAME: "Test",
+        GIT_COMMITTER_EMAIL: "test@test.com",
+      },
     },
   );
   const exitCode = await proc.exited;
