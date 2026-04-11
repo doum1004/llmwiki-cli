@@ -20,6 +20,7 @@ import { makeBacklinksCommand } from "../src/commands/backlinks.ts";
 import { makeOrphansCommand } from "../src/commands/orphans.ts";
 import { makeStatusCommand } from "../src/commands/status.ts";
 import { makeAuthCommand } from "../src/commands/auth.ts";
+import { makeSkillCommand } from "../src/commands/skill.ts";
 import { makeRepoCommand } from "../src/commands/repo.ts";
 import { makePushCommand } from "../src/commands/push.ts";
 import { makePullCommand } from "../src/commands/pull.ts";
@@ -40,6 +41,7 @@ program.addCommand(makeInitCommand());
 program.addCommand(makeRegistryCommand());
 program.addCommand(makeUseCommand());
 program.addCommand(makeAuthCommand());
+program.addCommand(makeSkillCommand());
 
 // Commands that require wiki resolution
 program.addCommand(makeReadCommand());
@@ -63,7 +65,7 @@ program.addCommand(makePullCommand());
 program.addCommand(makeSyncCommand());
 
 // Resolve wiki context for commands that need it
-const SKIP_RESOLUTION = new Set(["init", "registry", "use", "auth"]);
+const SKIP_RESOLUTION = new Set(["init", "registry", "use", "auth", "skill"]);
 
 program.hook("preAction", async (thisCommand, actionCommand) => {
   if (SKIP_RESOLUTION.has(actionCommand.name())) return;

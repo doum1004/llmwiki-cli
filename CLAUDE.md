@@ -16,7 +16,7 @@ A CLI tool that helps LLM agents (Claude Code, Codex, etc.) build and maintain p
 
 ## LLM Agent Skill Guide
 
-See [`docs/SKILL.md`](docs/SKILL.md) for a self-contained reference on how LLM agents should operate this CLI (workflows, command patterns, gotchas).
+Run `wiki skill` to print the full guide, or see [`docs/SKILL.md`](docs/SKILL.md) for the source. Covers workflows, command patterns, and gotchas for LLM agents.
 
 ## Project Structure
 
@@ -65,6 +65,7 @@ src/
     push.ts              # wiki push
     pull.ts              # wiki pull
     sync.ts              # wiki sync
+    skill.ts             # wiki skill (print LLM agent guide)
 test/
   init.test.ts           # Config, registry, resolver, templates, init integration
   git.test.ts            # Git operations (commit, log, diff, remote, branch)

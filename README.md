@@ -146,7 +146,7 @@ wiki sync                                           # Pull + push
 
 ## LLM Agent Skill Guide
 
-For a complete, self-contained reference designed for LLM agents, see [`docs/SKILL.md`](docs/SKILL.md). It covers workflows, command patterns, page format, and common gotchas.
+Run `wiki skill` to print the full guide, or see [`docs/SKILL.md`](docs/SKILL.md) for the source. Covers workflows, command patterns, page format, and common gotchas for LLM agents.
 
 ## How LLM Agents Use This
 
