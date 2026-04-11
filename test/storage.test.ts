@@ -5,14 +5,24 @@ import { tmpdir } from "os";
 import { createProvider } from "../src/lib/storage.ts";
 import { GitProvider } from "../src/lib/git-provider.ts";
 import * as git from "../src/lib/git.ts";
-import type { StorageProvider } from "../src/types.ts";
+import type { StorageProvider, WikiConfig } from "../src/types.ts";
+
+function makeConfig(backend: WikiConfig["backend"] = "filesystem"): WikiConfig {
+  return {
+    name: "test",
+    domain: "general",
+    created: new Date().toISOString(),
+    backend,
+    paths: { raw: "raw", wiki: "wiki", schema: "SCHEMA.md" },
+  };
+}
 
 let testDir: string;
 let provider: StorageProvider;
 
 beforeEach(async () => {
   testDir = await mkdtemp(join(tmpdir(), "llmwiki-storage-"));
-  provider = createProvider("filesystem", testDir);
+  provider = await createProvider(makeConfig("filesystem"), testDir);
 });
 
 afterEach(async () => {
@@ -29,21 +39,21 @@ describe("createProvider", () => {
     expect(provider.listPages).toBeInstanceOf(Function);
   });
 
-  it("creates a git provider", () => {
-    const gitProvider = createProvider("git", testDir);
+  it("creates a git provider", async () => {
+    const gitProvider = await createProvider(makeConfig("git"), testDir);
     expect(gitProvider).toBeInstanceOf(GitProvider);
   });
 
-  it("throws for supabase (not yet implemented)", () => {
-    expect(() => createProvider("supabase", testDir)).toThrow(
-      "Supabase backend not yet implemented",
-    );
+  it("rejects supabase without credentials", async () => {
+    expect(
+      createProvider(makeConfig("supabase"), testDir),
+    ).rejects.toThrow("Supabase config missing");
   });
 
-  it("throws for unknown backend", () => {
-    expect(() => createProvider("unknown" as any, testDir)).toThrow(
-      'Unknown storage backend: "unknown"',
-    );
+  it("throws for unknown backend", async () => {
+    expect(
+      createProvider(makeConfig("unknown" as any), testDir),
+    ).rejects.toThrow('Unknown storage backend: "unknown"');
   });
 });
 
@@ -105,7 +115,7 @@ describe("GitProvider", () => {
   beforeEach(async () => {
     gitDir = await mkdtemp(join(tmpdir(), "llmwiki-git-"));
     await git.init(gitDir);
-    gitProvider = createProvider("git", gitDir);
+    gitProvider = await createProvider(makeConfig("git"), gitDir);
   });
 
   afterEach(async () => {
@@ -133,7 +143,6 @@ describe("GitProvider", () => {
     const ok = await gitProvider.appendPage("missing.md", "nope");
     expect(ok).toBe(false);
     const log = await git.log(gitDir, 1);
-    // No commits should exist (or only prior ones)
     expect(log.output).not.toContain("append to missing.md");
   });
 

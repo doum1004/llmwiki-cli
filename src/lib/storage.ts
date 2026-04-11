@@ -1,21 +1,33 @@
 import { WikiManager } from "./wiki.ts";
 import { GitProvider } from "./git-provider.ts";
-import type { BackendType, StorageProvider, WikiContext } from "../types.ts";
+import type { WikiConfig, StorageProvider, WikiContext } from "../types.ts";
 
-export function createProvider(
-  backend: BackendType,
+export async function createProvider(
+  config: WikiConfig,
   root: string,
-): StorageProvider {
+): Promise<StorageProvider> {
+  const backend = config.backend ?? "filesystem";
   switch (backend) {
     case "filesystem":
       return new WikiManager(root);
     case "git":
       return new GitProvider(root);
-    case "supabase":
-      throw new Error("Supabase backend not yet implemented.");
+    case "supabase": {
+      if (!config.supabase?.url || !config.supabase?.key) {
+        throw new Error(
+          "Supabase config missing. Set supabase.url and supabase.key in .llmwiki.yaml",
+        );
+      }
+      const { SupabaseProvider } = await import("./supabase-provider.ts");
+      return SupabaseProvider.create(
+        config.supabase.url,
+        config.supabase.key,
+        config.name,
+      );
+    }
     default:
       throw new Error(
-        `Unknown storage backend: "${backend}". Supported: filesystem, git`,
+        `Unknown storage backend: "${backend}". Supported: filesystem, git, supabase`,
       );
   }
 }

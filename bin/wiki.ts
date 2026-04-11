@@ -87,10 +87,9 @@ program.hook("preAction", async (thisCommand, actionCommand) => {
     process.exit(1);
   }
 
-  const backend = resolved.config.backend ?? "filesystem";
   const context: WikiContext = {
     ...resolved,
-    provider: createProvider(backend, resolved.root),
+    provider: await createProvider(resolved.config, resolved.root),
   };
   actionCommand.setOptionValueWithSource("wikiContext", context, "cli");
 });

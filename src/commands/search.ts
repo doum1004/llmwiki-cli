@@ -1,6 +1,7 @@
 import { Command } from "commander";
 import { search } from "../lib/search.ts";
 import { loadRegistry } from "../lib/registry.ts";
+import { loadConfig } from "../lib/config.ts";
 import { createProvider } from "../lib/storage.ts";
 import type { WikiContext } from "../types.ts";
 import type { SearchResult } from "../lib/search.ts";
@@ -23,7 +24,9 @@ export function makeSearchCommand(): Command {
       if (options.all) {
         const registry = await loadRegistry();
         for (const [id, entry] of Object.entries(registry.wikis)) {
-          const wiki = createProvider("filesystem", entry.path);
+          const config = await loadConfig(entry.path);
+          if (!config) continue;
+          const wiki = await createProvider(config, entry.path);
           const hits = await search(wiki, query, { limit });
           for (const hit of hits) {
             results.push({ ...hit, wiki: id });

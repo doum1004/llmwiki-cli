@@ -4,8 +4,9 @@ export function getDefaultConfig(
   name: string,
   domain: string,
   backend: BackendType = "filesystem",
+  supabase?: { url: string; key: string },
 ): WikiConfig {
-  return {
+  const config: WikiConfig = {
     name,
     domain,
     created: new Date().toISOString(),
@@ -16,6 +17,10 @@ export function getDefaultConfig(
       schema: "SCHEMA.md",
     },
   };
+  if (supabase) {
+    config.supabase = supabase;
+  }
+  return config;
 }
 
 export function getDefaultSchema(name: string, domain: string): string {

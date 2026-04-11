@@ -205,8 +205,7 @@ export function makeRepoCommand(): Command {
           console.error(`Wiki "${wikiId}" not found.`);
           process.exit(1);
         }
-        const backend = resolved.config.backend ?? "filesystem";
-        ctx = { ...resolved, provider: createProvider(backend, resolved.root) };
+        ctx = { ...resolved, provider: await createProvider(resolved.config, resolved.root) };
       } else {
         ctx = this.optsWithGlobals().wikiContext;
       }
