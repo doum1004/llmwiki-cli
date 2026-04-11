@@ -16,6 +16,10 @@ import {
   getDefaultSchema,
   getDefaultIndex,
   getDefaultLog,
+  getVizWorkflow,
+  getBuildGraphScript,
+  getBuildSiteScript,
+  getWikiGitignore,
 } from "../src/lib/templates.ts";
 import type { WikiConfig, RegistryEntry } from "../src/types.ts";
 
@@ -277,6 +281,35 @@ describe("templates", () => {
     const log = getDefaultLog();
     expect(log).toContain("init | Wiki initialized");
   });
+
+  it("getVizWorkflow returns valid YAML with required fields", () => {
+    const workflow = getVizWorkflow();
+    const parsed = yaml.load(workflow) as any;
+    expect(parsed.name).toBeTruthy();
+    expect(parsed.on.push.branches).toContain("main");
+    expect(parsed.jobs["build-and-deploy"]).toBeDefined();
+    expect(parsed.permissions.pages).toBe("write");
+  });
+
+  it("getBuildGraphScript contains wikilink regex and graph.json output", () => {
+    const script = getBuildGraphScript();
+    expect(script).toContain("\\[\\[([^\\]|]+)");
+    expect(script).toContain("graph.json");
+    expect(script).toContain("findMdFiles");
+  });
+
+  it("getBuildSiteScript references d3 CDN and produces index.html", () => {
+    const script = getBuildSiteScript();
+    expect(script).toContain("cdn.jsdelivr.net/npm/d3@7");
+    expect(script).toContain("index.html");
+    expect(script).toContain("forceSimulation");
+  });
+
+  it("getWikiGitignore includes node_modules and dist", () => {
+    const gitignore = getWikiGitignore();
+    expect(gitignore).toContain("node_modules/");
+    expect(gitignore).toContain("dist/");
+  });
 });
 
 // --- init integration ---
@@ -371,5 +404,163 @@ describe("init command (integration)", () => {
 
     const config = await loadConfig(wikiDir);
     expect(config?.name).toBe("auto-named");
+  });
+});
+
+// --- viz scaffolding ---
+
+describe("viz scaffolding", () => {
+  it("scaffolds viz files with --backend git by default", async () => {
+    const wikiDir = join(testDir, "vizwiki");
+    const proc = Bun.spawn(
+      ["bun", "run", "bin/wiki.ts", "init", wikiDir, "--name", "vizwiki", "--backend", "git"],
+      {
+        cwd: process.cwd(),
+        stdout: "pipe",
+        stderr: "pipe",
+        env: {
+          ...process.env,
+          LLMWIKI_CONFIG_DIR: configDir,
+          GIT_AUTHOR_NAME: "Test",
+          GIT_AUTHOR_EMAIL: "test@test.com",
+          GIT_COMMITTER_NAME: "Test",
+          GIT_COMMITTER_EMAIL: "test@test.com",
+        },
+      },
+    );
+    await proc.exited;
+
+    expect(await Bun.file(join(wikiDir, ".github/workflows/wiki-viz.yml")).exists()).toBe(true);
+    expect(await Bun.file(join(wikiDir, "scripts/build-graph.js")).exists()).toBe(true);
+    expect(await Bun.file(join(wikiDir, "scripts/build-site.js")).exists()).toBe(true);
+    expect(await Bun.file(join(wikiDir, ".gitignore")).exists()).toBe(true);
+  });
+
+  it("skips viz files with --no-viz", async () => {
+    const wikiDir = join(testDir, "novizwiki");
+    const proc = Bun.spawn(
+      ["bun", "run", "bin/wiki.ts", "init", wikiDir, "--name", "novizwiki", "--backend", "git", "--no-viz"],
+      {
+        cwd: process.cwd(),
+        stdout: "pipe",
+        stderr: "pipe",
+        env: {
+          ...process.env,
+          LLMWIKI_CONFIG_DIR: configDir,
+          GIT_AUTHOR_NAME: "Test",
+          GIT_AUTHOR_EMAIL: "test@test.com",
+          GIT_COMMITTER_NAME: "Test",
+          GIT_COMMITTER_EMAIL: "test@test.com",
+        },
+      },
+    );
+    await proc.exited;
+
+    let hasWorkflow = true;
+    try { await stat(join(wikiDir, ".github/workflows/wiki-viz.yml")); } catch { hasWorkflow = false; }
+    expect(hasWorkflow).toBe(false);
+
+    let hasScripts = true;
+    try { await stat(join(wikiDir, "scripts")); } catch { hasScripts = false; }
+    expect(hasScripts).toBe(false);
+  });
+
+  it("does not scaffold viz for filesystem backend", async () => {
+    const wikiDir = join(testDir, "fswiki");
+    const proc = Bun.spawn(
+      ["bun", "run", "bin/wiki.ts", "init", wikiDir, "--name", "fswiki"],
+      {
+        cwd: process.cwd(),
+        stdout: "pipe",
+        stderr: "pipe",
+        env: { ...process.env, LLMWIKI_CONFIG_DIR: configDir },
+      },
+    );
+    await proc.exited;
+
+    let hasGithub = true;
+    try { await stat(join(wikiDir, ".github")); } catch { hasGithub = false; }
+    expect(hasGithub).toBe(false);
+
+    let hasScripts = true;
+    try { await stat(join(wikiDir, "scripts")); } catch { hasScripts = false; }
+    expect(hasScripts).toBe(false);
+  });
+
+  it("re-running init --viz on existing git wiki scaffolds viz files", async () => {
+    const wikiDir = join(testDir, "existingwiki");
+    const gitEnv = {
+      ...process.env,
+      LLMWIKI_CONFIG_DIR: configDir,
+      GIT_AUTHOR_NAME: "Test",
+      GIT_AUTHOR_EMAIL: "test@test.com",
+      GIT_COMMITTER_NAME: "Test",
+      GIT_COMMITTER_EMAIL: "test@test.com",
+    };
+    // First: init without viz
+    const proc1 = Bun.spawn(
+      ["bun", "run", "bin/wiki.ts", "init", wikiDir, "--name", "existingwiki", "--backend", "git", "--no-viz"],
+      { cwd: process.cwd(), stdout: "pipe", stderr: "pipe", env: gitEnv },
+    );
+    await proc1.exited;
+
+    // Verify no viz files
+    let hasWorkflow = true;
+    try { await stat(join(wikiDir, ".github")); } catch { hasWorkflow = false; }
+    expect(hasWorkflow).toBe(false);
+
+    // Re-run with --viz
+    const proc2 = Bun.spawn(
+      ["bun", "run", "bin/wiki.ts", "init", wikiDir, "--viz"],
+      { cwd: process.cwd(), stdout: "pipe", stderr: "pipe", env: gitEnv },
+    );
+    await proc2.exited;
+
+    // Now viz files should exist
+    expect(await Bun.file(join(wikiDir, ".github/workflows/wiki-viz.yml")).exists()).toBe(true);
+    expect(await Bun.file(join(wikiDir, "scripts/build-graph.js")).exists()).toBe(true);
+    expect(await Bun.file(join(wikiDir, "scripts/build-site.js")).exists()).toBe(true);
+
+    // Should be committed
+    const lsTree = Bun.spawn(
+      ["git", "ls-tree", "-r", "HEAD", "--name-only"],
+      { cwd: wikiDir, stdout: "pipe", stderr: "pipe" },
+    );
+    const output = await new Response(lsTree.stdout).text();
+    await lsTree.exited;
+    expect(output).toContain(".github/workflows/wiki-viz.yml");
+  });
+
+  it("viz files are included in initial git commit", async () => {
+    const wikiDir = join(testDir, "vizcommit");
+    const proc = Bun.spawn(
+      ["bun", "run", "bin/wiki.ts", "init", wikiDir, "--name", "vizcommit", "--backend", "git"],
+      {
+        cwd: process.cwd(),
+        stdout: "pipe",
+        stderr: "pipe",
+        env: {
+          ...process.env,
+          LLMWIKI_CONFIG_DIR: configDir,
+          GIT_AUTHOR_NAME: "Test",
+          GIT_AUTHOR_EMAIL: "test@test.com",
+          GIT_COMMITTER_NAME: "Test",
+          GIT_COMMITTER_EMAIL: "test@test.com",
+        },
+      },
+    );
+    await proc.exited;
+
+    const lsTree = Bun.spawn(
+      ["git", "ls-tree", "-r", "HEAD", "--name-only"],
+      { cwd: wikiDir, stdout: "pipe", stderr: "pipe" },
+    );
+    const output = await new Response(lsTree.stdout).text();
+    await lsTree.exited;
+
+    expect(output).toContain(".github/workflows/wiki-viz.yml");
+    expect(output).toContain("scripts/build-graph.js");
+    expect(output).toContain("scripts/build-site.js");
+    expect(output).toContain(".gitignore");
   });
 });

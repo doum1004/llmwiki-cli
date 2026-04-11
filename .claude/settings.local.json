@@ -28,7 +28,9 @@
       "Bash(head -5 /c/Workspace/Personal/llm-wiki/src/commands/*.ts)",
       "Bash(head -10 /c/Workspace/Personal/llm-wiki/src/lib/*.ts)",
       "Bash(npm test:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(grep -r \"export\\\\|json\\\\|format\" /c/Workspace/Personal/llm-wiki/docs/*.md)",
+      "Bash(ls:*)"
     ]
   }
 }

@@ -74,6 +74,12 @@ Page content here. Use [[wikilinks]] to connect pages.
 ### Directory structure (filesystem/git backends)
 
 ```
+.github/              # Only with --backend git (--viz, default)
+  workflows/
+    wiki-viz.yml      # GitHub Actions → GitHub Pages visualization
+scripts/              # Only with --backend git (--viz, default)
+  build-graph.js      # Builds graph.json from wikilinks
+  build-site.js       # Generates d3-force interactive graph
 raw/                  # Immutable source documents (paste originals here)
   assets/             # Downloaded images and files
 wiki/                 # LLM-generated pages (all knowledge lives here)
@@ -175,7 +181,9 @@ wiki search "neural networks" --all  # search across all wikis
 | Command | Description |
 |---------|-------------|
 | `wiki init [dir] --name <n> --domain <d> --backend <type>` | Create new wiki (backends: filesystem, git, supabase) |
-| `wiki init [dir] --backend git --git-token <pat> [--git-repo owner/repo]` | Create git-backed wiki with GitHub sync |
+| `wiki init [dir] --backend git --git-token <pat> [--git-repo owner/repo]` | Create git-backed wiki with GitHub sync + visualization |
+| `wiki init [dir] --backend git --no-viz` | Create git-backed wiki without visualization |
+| `wiki init [existing-dir] --viz` | Add visualization to existing git wiki |
 | `wiki init [dir] --backend supabase --supabase-url <url> --supabase-key <key>` | Create Supabase-backed wiki |
 | `wiki registry` | List all registered wikis |
 | `wiki use [wiki-id]` | List wikis or set active wiki |
@@ -223,3 +231,5 @@ wiki search "neural networks" --all  # search across all wikis
 5. **search --all** searches across all registered wikis, not just the active one.
 
 6. **lint checks five things**: broken wikilinks, orphan pages, missing frontmatter, empty pages, and index consistency (pages not in index, index entries pointing to missing pages).
+
+7. **GitHub Pages visualization** — git-backend wikis include a GitHub Actions workflow that builds an interactive graph on every push. Enable Pages in repo settings (Settings > Pages > Source: GitHub Actions). Use `--no-viz` at init to skip, or re-run `wiki init <dir> --viz` to add it later.

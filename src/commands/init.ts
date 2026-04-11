@@ -1,16 +1,20 @@
 import { Command } from "commander";
 import { resolve, basename } from "path";
-import { mkdir, writeFile } from "fs/promises";
-import { saveConfig } from "../lib/config.ts";
+import { mkdir, writeFile, stat } from "fs/promises";
+import { loadConfig, saveConfig } from "../lib/config.ts";
 import { addToRegistry } from "../lib/registry.ts";
 import { createProvider } from "../lib/storage.ts";
 import * as git from "../lib/git.ts";
-import { createRepo, getUsername } from "../lib/github.ts";
+import { createRepo, getUsername, enablePages } from "../lib/github.ts";
 import {
   getDefaultConfig,
   getDefaultSchema,
   getDefaultIndex,
   getDefaultLog,
+  getVizWorkflow,
+  getBuildGraphScript,
+  getBuildSiteScript,
+  getWikiGitignore,
 } from "../lib/templates.ts";
 import type { BackendType, RegistryEntry } from "../types.ts";
 
@@ -34,6 +38,8 @@ export function makeInitCommand(): Command {
     .option("--git-repo <owner/repo>", "GitHub repo (auto-created if omitted with --git-token)")
     .option("--supabase-url <url>", "Supabase project URL")
     .option("--supabase-key <key>", "Supabase anon/service key")
+    .option("--viz", "scaffold GitHub Pages visualization (git backend only)", true)
+    .option("--no-viz", "skip visualization scaffolding")
     .action(
       async (
         dir: string | undefined,
@@ -45,11 +51,80 @@ export function makeInitCommand(): Command {
           gitRepo?: string;
           supabaseUrl?: string;
           supabaseKey?: string;
+          viz: boolean;
         },
       ) => {
-        const backend = options.backend as BackendType;
         const targetDir = resolve(dir ?? ".");
         const name = options.name ?? basename(targetDir);
+
+        // Check for existing wiki — if found, only scaffold viz files
+        const existingConfig = await loadConfig(targetDir);
+        if (existingConfig) {
+          if (!options.viz) {
+            console.error("Wiki already exists at this directory. Use --viz to add visualization files.");
+            process.exit(1);
+          }
+          if (existingConfig.backend !== "git") {
+            console.error("Visualization requires git backend.");
+            process.exit(1);
+          }
+
+          // Scaffold viz files into existing wiki
+          await Promise.all([
+            mkdir(resolve(targetDir, ".github/workflows"), { recursive: true }),
+            mkdir(resolve(targetDir, "scripts"), { recursive: true }),
+          ]);
+          await Promise.all([
+            writeFile(
+              resolve(targetDir, ".github/workflows/wiki-viz.yml"),
+              getVizWorkflow(),
+              "utf-8",
+            ),
+            writeFile(
+              resolve(targetDir, "scripts/build-graph.js"),
+              getBuildGraphScript(),
+              "utf-8",
+            ),
+            writeFile(
+              resolve(targetDir, "scripts/build-site.js"),
+              getBuildSiteScript(),
+              "utf-8",
+            ),
+          ]);
+          // Write .gitignore only if it doesn't exist
+          const gitignorePath = resolve(targetDir, ".gitignore");
+          try {
+            await stat(gitignorePath);
+          } catch {
+            await writeFile(gitignorePath, getWikiGitignore(), "utf-8");
+          }
+
+          // Commit the viz files
+          await git.addAll(targetDir);
+          await git.commit(targetDir, "Add wiki visualization");
+
+          // Push if remote is configured
+          if (existingConfig.git) {
+            const branch = await git.currentBranch(targetDir);
+            const pushResult = await git.push(targetDir, "origin", branch);
+            if (pushResult.ok) {
+              console.log(`Pushed to ${existingConfig.git.repo}`);
+              try {
+                await enablePages(existingConfig.git.token, existingConfig.git.repo);
+              } catch {
+                // Non-fatal
+              }
+            } else {
+              console.error(`Warning: push failed: ${pushResult.output}`);
+            }
+          }
+
+          console.log("Visualization: GitHub Actions workflow scaffolded.");
+          console.log("Enable GitHub Pages (Settings → Pages → Source: GitHub Actions) to see the graph.");
+          return;
+        }
+
+        const backend = options.backend as BackendType;
         const domain = options.domain;
 
         // Validate supabase options
@@ -140,6 +215,36 @@ export function makeInitCommand(): Command {
             ),
           ]);
 
+          // Scaffold visualization files (git backend only)
+          if (backend === "git" && options.viz) {
+            await Promise.all([
+              mkdir(resolve(targetDir, ".github/workflows"), { recursive: true }),
+              mkdir(resolve(targetDir, "scripts"), { recursive: true }),
+            ]);
+            await Promise.all([
+              writeFile(
+                resolve(targetDir, ".github/workflows/wiki-viz.yml"),
+                getVizWorkflow(),
+                "utf-8",
+              ),
+              writeFile(
+                resolve(targetDir, "scripts/build-graph.js"),
+                getBuildGraphScript(),
+                "utf-8",
+              ),
+              writeFile(
+                resolve(targetDir, "scripts/build-site.js"),
+                getBuildSiteScript(),
+                "utf-8",
+              ),
+              writeFile(
+                resolve(targetDir, ".gitignore"),
+                getWikiGitignore(),
+                "utf-8",
+              ),
+            ]);
+          }
+
           // Git init + initial commit + remote (git backend only)
           if (backend === "git") {
             const initResult = await git.init(targetDir);
@@ -172,6 +277,15 @@ export function makeInitCommand(): Command {
                     `Warning: initial push failed: ${pushResult.output}`,
                   );
                 }
+
+                // Enable GitHub Pages if viz is enabled
+                if (options.viz) {
+                  try {
+                    await enablePages(gitConfig.token, gitConfig.repo);
+                  } catch {
+                    // Non-fatal — user can enable manually
+                  }
+                }
               }
             }
           }
@@ -189,6 +303,10 @@ export function makeInitCommand(): Command {
         console.log(`Wiki "${name}" initialized at ${targetDir}`);
         console.log(`Domain: ${domain}`);
         console.log(`Backend: ${backend}`);
+        if (backend === "git" && options.viz) {
+          console.log("Visualization: GitHub Actions workflow scaffolded.");
+          console.log("Enable GitHub Pages (Settings → Pages → Source: GitHub Actions) to see the graph.");
+        }
         console.log("Registered in global registry.");
       },
     );

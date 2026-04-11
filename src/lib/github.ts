@@ -55,3 +55,25 @@ export async function getUsername(token: string): Promise<string> {
   const data = (await res.json()) as { login: string };
   return data.login;
 }
+
+export async function enablePages(
+  token: string,
+  repo: string,
+): Promise<boolean> {
+  const res = await fetch(
+    `https://api.github.com/repos/${repo}/pages`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/vnd.github+json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        build_type: "workflow",
+      }),
+    },
+  );
+  // 201 = created, 409 = already enabled
+  return res.status === 201 || res.status === 409;
+}

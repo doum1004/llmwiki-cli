@@ -34,15 +34,15 @@ src/
     registry.ts          # Global registry (~/.config/llmwiki/registry.yaml)
     resolver.ts          # Wiki resolution chain (--wiki → cwd → walk up → default)
     git.ts               # Git operations via child_process.execFile
-    github.ts            # GitHub API: createRepo, getUsername
-    templates.ts         # Default file content (SCHEMA.md, index.md, log.md)
+    github.ts            # GitHub API: createRepo, getUsername, enablePages
+    templates.ts         # Default file content (SCHEMA.md, index.md, log.md, viz workflow/scripts)
     search.ts            # Full-text search with term-frequency ranking
     index-manager.ts     # IndexManager: uses StorageProvider for index.md
     log-manager.ts       # LogManager: uses StorageProvider for log.md
     frontmatter.ts       # YAML frontmatter parse/detect/add
     link-parser.ts       # Wikilink extraction and link graph building
   commands/
-    init.ts              # wiki init (--backend, --git-token, --supabase-url, etc.)
+    init.ts              # wiki init (--backend, --git-token, --viz, --supabase-url, etc.)
     registry.ts          # wiki registry
     use.ts               # wiki use
     read.ts              # wiki read
@@ -82,7 +82,9 @@ docs/
 ```
 wiki init [dir] --name --domain --backend <filesystem|git|supabase>
 wiki init [dir] --backend git --git-token <pat> [--git-repo owner/repo]
+wiki init [dir] --backend git --no-viz              # Skip visualization scaffolding
 wiki init [dir] --backend supabase --supabase-url <url> --supabase-key <key>
+wiki init [existing-wiki-dir] --viz                 # Add visualization to existing git wiki
 wiki registry                       # List all wikis
 wiki use [wiki-id]                  # Set active wiki
 ```
@@ -128,7 +130,8 @@ wiki status [--json]                # Wiki overview stats
 - **IndexManager/LogManager**: Accept `StorageProvider` in constructor (not filesystem paths). Backend-agnostic.
 - **Registry**: Global at `~/.config/llmwiki/registry.yaml`, overridable via `LLMWIKI_CONFIG_DIR` env var (used in tests).
 - **Git**: All operations use `child_process.execFile`, return `{ ok: boolean, output: string }`.
-- **GitHub API**: Minimal `createRepo` + `getUsername` in `src/lib/github.ts`. Used by init for auto-creating repos.
+- **GitHub API**: `createRepo`, `getUsername`, `enablePages` in `src/lib/github.ts`. Used by init for auto-creating repos and enabling GitHub Pages.
+- **Viz scaffolding**: `wiki init --backend git` scaffolds GitHub Actions workflow + build scripts for d3-force graph visualization deployed to GitHub Pages. Controlled by `--viz` (default true) / `--no-viz`. Re-running `wiki init <dir> --viz` on an existing git wiki adds viz files without overwriting wiki content.
 - **No Bun-specific APIs in src/**: Source code uses only Node.js APIs for npm compatibility. Bun APIs are only used in tests.
 
 ## Development
@@ -136,7 +139,7 @@ wiki status [--json]                # Wiki overview stats
 ```bash
 bun install              # Install deps
 bun run dev              # Run CLI via source
-bun test                 # Run tests (185 tests across 13 files)
+bun test                 # Run tests (194 tests across 13 files)
 bun run build            # Bundle to dist/wiki.js
 bun run typecheck        # TypeScript check
 ```
@@ -160,6 +163,7 @@ See `docs/phase-{1-5}.md` for detailed tracking. All phases complete:
 - Phase 4: **COMPLETE** — lint, links, backlinks, orphans, status
 - Phase 5: **COMPLETE** — auth, repo, push, pull, sync
 - Phase 6: **COMPLETE** — StorageProvider abstraction (filesystem, git, supabase backends)
+- Phase 7: **COMPLETE** — GitHub Pages visualization (GitHub Actions workflow, d3-force graph)
 
 ## Conventions
 

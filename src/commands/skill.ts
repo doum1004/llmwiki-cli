@@ -62,6 +62,12 @@ Page content here. Use [[wikilinks]] to connect pages.
 ### Directory structure
 
 \`\`\`
+.github/              # Only with --backend git (--viz, default)
+  workflows/
+    wiki-viz.yml      # GitHub Actions → GitHub Pages visualization
+scripts/              # Only with --backend git (--viz, default)
+  build-graph.js      # Builds graph.json from wikilinks
+  build-site.js       # Generates d3-force interactive graph
 raw/                  # Immutable source documents (paste originals here)
   assets/             # Downloaded images and files
 wiki/                 # LLM-generated pages (all knowledge lives here)
@@ -177,6 +183,8 @@ wiki search "neural networks" --all  # search across all wikis
 | Command | Description |
 |---------|-------------|
 | \`wiki init [dir] --name <n> --domain <d>\` | Create new wiki with directory structure |
+| \`wiki init [dir] --backend git [--no-viz]\` | Create git-backed wiki (--viz default, adds GitHub Pages graph) |
+| \`wiki init [existing-dir] --viz\` | Add visualization to existing git wiki |
 | \`wiki registry\` | List all registered wikis |
 | \`wiki use [wiki-id]\` | Set active wiki (interactive picker if no id) |
 
@@ -247,7 +255,9 @@ wiki search "neural networks" --all  # search across all wikis
 
 6. **search --all** searches across all registered wikis, not just the active one.
 
-7. **lint checks five things**: broken wikilinks, orphan pages, missing frontmatter, empty pages, and index consistency (pages not in index, index entries pointing to missing pages).`;
+7. **lint checks five things**: broken wikilinks, orphan pages, missing frontmatter, empty pages, and index consistency (pages not in index, index entries pointing to missing pages).
+
+8. **GitHub Pages visualization** — git-backend wikis include a GitHub Actions workflow that builds an interactive graph on every push. Enable Pages in repo settings (Settings > Pages > Source: GitHub Actions). Use \`--no-viz\` at init to skip, or re-run \`wiki init <dir> --viz\` to add it later.`;
 
 export function makeSkillCommand(): Command {
   return new Command("skill")

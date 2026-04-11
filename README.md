@@ -86,8 +86,15 @@ When you run `wiki init` (filesystem or git backend), it creates:
 ```
 my-wiki/
 ├── .git/                  # Only with --backend git
+├── .github/               # Only with --backend git (--viz)
+│   └── workflows/
+│       └── wiki-viz.yml   # GitHub Actions → GitHub Pages visualization
+├── .gitignore             # Only with --backend git (--viz)
 ├── .llmwiki.yaml          # Wiki config (all backends)
 ├── SCHEMA.md              # Instructions for LLM agents
+├── scripts/               # Only with --backend git (--viz)
+│   ├── build-graph.js     # Builds graph.json from wikilinks
+│   └── build-site.js      # Generates d3-force visualization
 ├── raw/                   # Immutable source documents
 │   └── assets/            # Downloaded images
 └── wiki/                  # LLM-generated pages
@@ -107,7 +114,9 @@ For supabase backend, only `.llmwiki.yaml` is created locally. Pages are stored 
 ```bash
 wiki init [dir] --name <name> --domain <domain> --backend <type>
 wiki init [dir] --backend git --git-token <pat> [--git-repo owner/repo]
+wiki init [dir] --backend git --no-viz              # Skip visualization scaffolding
 wiki init [dir] --backend supabase --supabase-url <url> --supabase-key <key>
+wiki init [existing-wiki-dir] --viz                 # Add visualization to existing git wiki
 wiki registry                                       # List all wikis
 wiki use [wiki-id]                                  # Set active wiki
 ```
@@ -186,6 +195,18 @@ wiki orphans               # pages nobody links to
 wiki status                # overview stats
 ```
 
+## Graph Visualization
+
+Git-backend wikis automatically include a GitHub Actions workflow that builds an interactive d3-force graph visualization of your wiki's link structure and deploys it to GitHub Pages.
+
+- **Auto-scaffolded**: `wiki init --backend git` creates `.github/workflows/wiki-viz.yml` and `scripts/` build scripts by default
+- **On every push**: GitHub Actions parses all `[[wikilinks]]`, builds a force-directed graph, and deploys to Pages
+- **Interactive**: color-coded nodes by directory, zoom/pan, click-to-highlight connections, hover tooltips
+- **Opt-out**: use `--no-viz` to skip visualization scaffolding
+- **Add to existing wiki**: re-run `wiki init <dir> --viz` on an existing git wiki to add visualization files
+
+After init, enable GitHub Pages in your repo settings (Settings > Pages > Source: GitHub Actions).
+
 ## Multi-Wiki Support
 
 The CLI supports multiple wikis via a global registry at `~/.config/llmwiki/`:
@@ -213,7 +234,7 @@ wiki search "neural networks" --all       # search across all wikis
 git clone https://github.com/doum1004/llmwiki-cli
 cd llmwiki-cli
 bun install
-bun test            # 210 tests
+bun test            # 194 tests
 bun run build       # bundle to dist/wiki.js
 bun run dev -- --help
 ```
