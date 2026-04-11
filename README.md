@@ -29,7 +29,7 @@ v
 wiki CLI (StorageProvider abstraction)
 |
 v
-filesystem | git (auto-commit) | supabase (database)
+filesystem | git (auto-commit + auto-push) | supabase (database)
 ```
 
 **Key principle**: The CLI never calls any LLM API. It is a pure storage tool with pluggable backends.
@@ -47,7 +47,7 @@ This gives you two commands: `wiki` (primary, 4 chars) and `llmwiki` (fallback i
 | Backend | Description | Init |
 |---------|-------------|------|
 | `filesystem` (default) | Plain markdown files on disk | `wiki init my-wiki` |
-| `git` | Filesystem + auto-commit on every write + git commands | `wiki init my-wiki --backend git` |
+| `git` | Filesystem + auto-commit + auto-push to GitHub | `wiki init my-wiki --backend git --git-token <pat>` |
 | `supabase` | Pages in a Supabase database table | `wiki init my-wiki --backend supabase --supabase-url <url> --supabase-key <key>` |
 
 ## Quick Start
@@ -56,8 +56,8 @@ This gives you two commands: `wiki` (primary, 4 chars) and `llmwiki` (fallback i
 # Create a new wiki (filesystem backend, default)
 wiki init my-wiki --name "My Notes" --domain "research"
 
-# Or with git versioning
-wiki init my-wiki --name "My Notes" --domain "research" --backend git
+# Or with git + GitHub sync
+wiki init my-wiki --name "My Notes" --domain "research" --backend git --git-token ghp_xxx
 
 # Write a page
 wiki write wiki/concepts/attention.md <<'EOF'
@@ -105,7 +105,8 @@ For supabase backend, only `.llmwiki.yaml` is created locally. Pages are stored 
 
 ### Wiki Management
 ```bash
-wiki init [dir] --name <name> --domain <domain> --backend <type>  # Create new wiki
+wiki init [dir] --name <name> --domain <domain> --backend <type>
+wiki init [dir] --backend git --git-token <pat> [--git-repo owner/repo]
 wiki init [dir] --backend supabase --supabase-url <url> --supabase-key <key>
 wiki registry                                       # List all wikis
 wiki use [wiki-id]                                  # Set active wiki

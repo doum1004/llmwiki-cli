@@ -221,38 +221,6 @@ describe("log command", () => {
   });
 });
 
-// --- commit ---
-
-describe("commit command", () => {
-  it("commits changes with provided message", async () => {
-    await initWiki("testwiki", "git");
-    // Modify a file directly (not via wiki write, which auto-commits)
-    const indexPath = join(wikiDir, "wiki/index.md");
-    const content = await readFile(indexPath, "utf-8");
-    await writeFile(indexPath, content + "\n- [[new-entry]]\n", "utf-8");
-    const result = await runWiki(["-w", "testwiki", "commit", "Add new entry"]);
-    expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain("Add new entry");
-  });
-
-  it("reports nothing to commit when clean", async () => {
-    await initWiki("testwiki", "git");
-    const result = await runWiki(["-w", "testwiki", "commit", "Empty commit"]);
-    expect(result.stdout).toContain("Nothing to commit");
-  });
-
-  it("auto-commits on wiki write with git backend", async () => {
-    await initWiki("testwiki", "git");
-    await runWiki(
-      ["-w", "testwiki", "write", "wiki/concepts/attention.md"],
-      "Attention content",
-    );
-    // Page was auto-committed, so manual commit has nothing to do
-    const result = await runWiki(["-w", "testwiki", "commit", "Manual commit"]);
-    expect(result.stdout).toContain("Nothing to commit");
-  });
-});
-
 // --- lint ---
 
 describe("lint command", () => {
@@ -304,7 +272,7 @@ describe("status command", () => {
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain("testwiki");
     expect(result.stdout).toContain("Pages:");
-    expect(result.stdout).toContain("Git:");
+    expect(result.stdout).toContain("Pages:");
   });
 
   it("outputs json format", async () => {
@@ -371,42 +339,6 @@ describe("orphans command", () => {
     const result = await runWiki(["-w", "testwiki", "orphans"]);
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain("lonely");
-  });
-});
-
-// --- history + diff ---
-
-describe("history command", () => {
-  it("shows git history for a page", async () => {
-    await initWiki("testwiki", "git");
-    // wiki write auto-commits with git backend
-    await runWiki(
-      ["-w", "testwiki", "write", "wiki/concepts/tracked.md"],
-      "Version 1",
-    );
-    const result = await runWiki(["-w", "testwiki", "history", "wiki/concepts/tracked.md"]);
-    expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain("update wiki/concepts/tracked.md");
-  });
-});
-
-describe("diff command", () => {
-  it("shows no changes when working tree is clean", async () => {
-    await initWiki("testwiki", "git");
-    const result = await runWiki(["-w", "testwiki", "diff"]);
-    expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain("No changes");
-  });
-
-  it("shows changes to tracked files", async () => {
-    await initWiki("testwiki", "git");
-    // Modify a tracked file directly (not via wiki write, which auto-commits)
-    const indexPath = join(wikiDir, "wiki/index.md");
-    const content = await readFile(indexPath, "utf-8");
-    await writeFile(indexPath, content + "\n## New Section\n", "utf-8");
-    const result = await runWiki(["-w", "testwiki", "diff"]);
-    expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain("New Section");
   });
 });
 

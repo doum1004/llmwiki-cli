@@ -1,6 +1,5 @@
 import { Command } from "commander";
 import { loadRegistry, setDefault } from "../lib/registry.ts";
-import { pickWiki } from "../lib/picker.ts";
 
 export function makeUseCommand(): Command {
   return new Command("use")
@@ -8,11 +7,19 @@ export function makeUseCommand(): Command {
     .argument("[wiki-id]", "wiki identifier to activate")
     .action(async (wikiId: string | undefined) => {
       if (!wikiId) {
-        const selected = await pickWiki();
-        if (!selected) {
+        const registry = await loadRegistry();
+        const ids = Object.keys(registry.wikis);
+        if (ids.length === 0) {
+          console.error('No wikis registered. Run "wiki init" first.');
           process.exit(1);
         }
-        wikiId = selected.id;
+        console.log("Available wikis:");
+        for (const id of ids) {
+          const marker = id === registry.default ? " (active)" : "";
+          console.log(`  ${id}${marker}`);
+        }
+        console.log('\nUsage: wiki use <wiki-id>');
+        return;
       }
 
       const success = await setDefault(wikiId);
@@ -22,8 +29,6 @@ export function makeUseCommand(): Command {
         console.error(`Wiki "${wikiId}" not found in registry.`);
         if (ids.length > 0) {
           console.error(`Available wikis: ${ids.join(", ")}`);
-        } else {
-          console.error('No wikis registered. Run "wiki init" first.');
         }
         process.exit(1);
       }

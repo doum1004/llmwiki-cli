@@ -26,26 +26,23 @@ dist/wiki.js             # Built bundle (npm-published artifact)
 src/
   types.ts               # Shared TypeScript interfaces
   lib/
-    storage.ts           # StorageProvider factory (createProvider) + requireGit guard
+    storage.ts           # StorageProvider factory (createProvider)
     wiki.ts              # WikiManager: filesystem StorageProvider
-    git-provider.ts      # GitProvider: filesystem + auto-commit on write/append
+    git-provider.ts      # GitProvider: filesystem + auto-commit + auto-push
     supabase-provider.ts # SupabaseProvider: Supabase database StorageProvider
     config.ts            # .llmwiki.yaml read/write
     registry.ts          # Global registry (~/.config/llmwiki/registry.yaml)
     resolver.ts          # Wiki resolution chain (--wiki → cwd → walk up → default)
     git.ts               # Git operations via child_process.execFile
+    github.ts            # GitHub API: createRepo, getUsername
     templates.ts         # Default file content (SCHEMA.md, index.md, log.md)
-    picker.ts            # Interactive wiki selection (prompt())
-    prompt.ts            # User input prompting (readline wrapper)
     search.ts            # Full-text search with term-frequency ranking
     index-manager.ts     # IndexManager: uses StorageProvider for index.md
     log-manager.ts       # LogManager: uses StorageProvider for log.md
     frontmatter.ts       # YAML frontmatter parse/detect/add
     link-parser.ts       # Wikilink extraction and link graph building
-    auth.ts              # GitHub auth (PAT token) persistence
-    github.ts            # GitHub API: listRepos, getRepo, createRepo
   commands/
-    init.ts              # wiki init
+    init.ts              # wiki init (--backend, --git-token, --supabase-url, etc.)
     registry.ts          # wiki registry
     use.ts               # wiki use
     read.ts              # wiki read
@@ -55,31 +52,20 @@ src/
     search.ts            # wiki search
     index-cmd.ts         # wiki index (add/remove/show)
     log-cmd.ts           # wiki log (append/show)
-    commit.ts            # wiki commit
-    history.ts           # wiki history
-    diff.ts              # wiki diff
     lint.ts              # wiki lint
     links.ts             # wiki links
     backlinks.ts         # wiki backlinks
     orphans.ts           # wiki orphans
     status.ts            # wiki status
-    auth.ts              # wiki auth (login/status/logout)
-    repo.ts              # wiki repo (list/create/clone/connect)
-    push.ts              # wiki push
-    pull.ts              # wiki pull
-    sync.ts              # wiki sync
     skill.ts             # wiki skill (print LLM agent guide)
 test/
   init.test.ts           # Config, registry, resolver, templates, init integration
   git.test.ts            # Git operations (commit, log, diff, remote, branch)
   read-write.test.ts     # WikiManager page operations
-  storage.test.ts        # StorageProvider factory, filesystem + git provider contracts
-  search.test.ts         # Full-text search
-  index-manager.test.ts  # Index entry management
-  log-manager.test.ts    # Activity log management
-  links.test.ts          # Wikilink extraction and link graph
-  lint.test.ts           # Frontmatter and lint checks
-  auth.test.ts           # Auth persistence (save/load/clear/getToken)
+  storage.test.ts        # StorageProvider factory
+  filesystem-provider.test.ts # Filesystem provider contract tests
+  git-provider.test.ts   # GitProvider auto-commit tests
+  supabase-provider.test.ts # SupabaseProvider with mocked client
   github.test.ts         # GitHub API with mocked fetch
   commands.test.ts       # End-to-end CLI command integration tests
 docs/
@@ -95,6 +81,7 @@ docs/
 ### Wiki Management
 ```
 wiki init [dir] --name --domain --backend <filesystem|git|supabase>
+wiki init [dir] --backend git --git-token <pat> [--git-repo owner/repo]
 wiki init [dir] --backend supabase --supabase-url <url> --supabase-key <key>
 wiki registry                       # List all wikis
 wiki use [wiki-id]                  # Set active wiki
@@ -131,17 +118,17 @@ wiki status [--json]                # Wiki overview stats
 
 - **StorageProvider pattern**: All page I/O goes through the `StorageProvider` interface (5 methods: readPage, writePage, appendPage, pageExists, listPages). Three implementations:
   - `WikiManager` — filesystem (default)
-  - `GitProvider` — wraps WikiManager, auto-commits on write/append
+  - `GitProvider` — wraps WikiManager, auto-commits + auto-pushes on write/append
   - `SupabaseProvider` — pages in Supabase `wiki_pages` table (dynamic import, optional dependency)
 - **Provider factory**: `createProvider(config, root)` in `src/lib/storage.ts`. Async (for dynamic Supabase import). Called once in preAction hook, injected as `ctx.provider`.
 - **Commander pattern**: Each command is a factory function (`makeXxxCommand()`) returning a `Command` instance, registered via `program.addCommand()`.
-- **preAction hook**: Resolves which wiki to target, creates the StorageProvider, attaches both to `WikiContext`. Commands in `SKIP_RESOLUTION` set (init, registry, use, auth, skill) bypass this.
+- **preAction hook**: Resolves which wiki to target, creates the StorageProvider, attaches both to `WikiContext`. Commands in `SKIP_RESOLUTION` set (init, registry, use, skill) bypass this.
 - **Wiki resolution order**: `--wiki` flag → cwd `.llmwiki.yaml` → walk up directories → registry default.
-- **Backend gating**: Git commands (commit, push, pull, sync, history, diff) check `requireGit(ctx)` and exit with error for non-git backends.
+- **Credentials in config**: Git token/repo and Supabase URL/key stored in `.llmwiki.yaml`. No separate auth commands — everything via `wiki init` flags.
 - **IndexManager/LogManager**: Accept `StorageProvider` in constructor (not filesystem paths). Backend-agnostic.
 - **Registry**: Global at `~/.config/llmwiki/registry.yaml`, overridable via `LLMWIKI_CONFIG_DIR` env var (used in tests).
 - **Git**: All operations use `child_process.execFile`, return `{ ok: boolean, output: string }`.
-- **GitHub API**: Uses `fetch` with Bearer token auth. Pagination, error handling for 401/403/422.
+- **GitHub API**: Minimal `createRepo` + `getUsername` in `src/lib/github.ts`. Used by init for auto-creating repos.
 - **No Bun-specific APIs in src/**: Source code uses only Node.js APIs for npm compatibility. Bun APIs are only used in tests.
 
 ## Development
@@ -149,7 +136,7 @@ wiki status [--json]                # Wiki overview stats
 ```bash
 bun install              # Install deps
 bun run dev              # Run CLI via source
-bun test                 # Run tests (210 tests across 12 files)
+bun test                 # Run tests (185 tests across 13 files)
 bun run build            # Bundle to dist/wiki.js
 bun run typecheck        # TypeScript check
 ```

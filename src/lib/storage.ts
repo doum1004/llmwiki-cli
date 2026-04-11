@@ -1,6 +1,6 @@
 import { WikiManager } from "./wiki.ts";
 import { GitProvider } from "./git-provider.ts";
-import type { WikiConfig, StorageProvider, WikiContext } from "../types.ts";
+import type { WikiConfig, StorageProvider } from "../types.ts";
 
 export async function createProvider(
   config: WikiConfig,
@@ -11,7 +11,7 @@ export async function createProvider(
     case "filesystem":
       return new WikiManager(root);
     case "git":
-      return new GitProvider(root);
+      return new GitProvider(root, config.git);
     case "supabase": {
       if (!config.supabase?.url || !config.supabase?.key) {
         throw new Error(
@@ -32,12 +32,3 @@ export async function createProvider(
   }
 }
 
-export function requireGit(ctx: WikiContext, commandName: string): void {
-  const backend = ctx.config.backend ?? "filesystem";
-  if (backend !== "git") {
-    console.error(
-      `"wiki ${commandName}" requires git backend. This wiki uses "${backend}".`,
-    );
-    process.exit(1);
-  }
-}

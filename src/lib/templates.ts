@@ -4,7 +4,10 @@ export function getDefaultConfig(
   name: string,
   domain: string,
   backend: BackendType = "filesystem",
-  supabase?: { url: string; key: string },
+  options?: {
+    git?: { token: string; repo: string };
+    supabase?: { url: string; key: string };
+  },
 ): WikiConfig {
   const config: WikiConfig = {
     name,
@@ -17,8 +20,11 @@ export function getDefaultConfig(
       schema: "SCHEMA.md",
     },
   };
-  if (supabase) {
-    config.supabase = supabase;
+  if (options?.git) {
+    config.git = options.git;
+  }
+  if (options?.supabase) {
+    config.supabase = options.supabase;
   }
   return config;
 }

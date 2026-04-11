@@ -13,6 +13,10 @@ export interface WikiConfig {
   domain: string;
   created: string;
   backend?: BackendType;
+  git?: {
+    token: string;
+    repo: string;
+  };
   supabase?: {
     url: string;
     key: string;

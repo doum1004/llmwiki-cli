@@ -1,6 +1,6 @@
 {
   "name": "llmwiki-cli",
-  "version": "0.1.5",
+  "version": "0.2.0",
   "description": "CLI tool for LLM agents to build and maintain personal knowledge bases",
   "repository": {
     "type": "git",

@@ -5,6 +5,7 @@ import { saveConfig } from "../lib/config.ts";
 import { addToRegistry } from "../lib/registry.ts";
 import { createProvider } from "../lib/storage.ts";
 import * as git from "../lib/git.ts";
+import { createRepo, getUsername } from "../lib/github.ts";
 import {
   getDefaultConfig,
   getDefaultSchema,
@@ -29,6 +30,8 @@ export function makeInitCommand(): Command {
     .option("-n, --name <name>", "wiki name")
     .option("-d, --domain <domain>", "knowledge domain", "general")
     .option("-b, --backend <type>", "storage backend (filesystem, git, supabase)", "filesystem")
+    .option("--git-token <token>", "GitHub personal access token")
+    .option("--git-repo <owner/repo>", "GitHub repo (auto-created if omitted with --git-token)")
     .option("--supabase-url <url>", "Supabase project URL")
     .option("--supabase-key <key>", "Supabase anon/service key")
     .action(
@@ -38,6 +41,8 @@ export function makeInitCommand(): Command {
           name?: string;
           domain: string;
           backend: string;
+          gitToken?: string;
+          gitRepo?: string;
           supabaseUrl?: string;
           supabaseKey?: string;
         },
@@ -57,6 +62,27 @@ export function makeInitCommand(): Command {
           }
         }
 
+        // Resolve git config
+        let gitConfig: { token: string; repo: string } | undefined;
+        if (backend === "git" && options.gitToken) {
+          let repo = options.gitRepo;
+          if (!repo) {
+            // Auto-create repo on GitHub
+            const repoName = `wiki-${name}`;
+            console.log(`Creating GitHub repo: ${repoName}...`);
+            try {
+              const created = await createRepo(options.gitToken, repoName);
+              const username = await getUsername(options.gitToken);
+              repo = `${username}/${created.name}`;
+              console.log(`Created: ${repo}`);
+            } catch (err: any) {
+              console.error(`Failed to create repo: ${err.message}`);
+              process.exit(1);
+            }
+          }
+          gitConfig = { token: options.gitToken, repo };
+        }
+
         const supabaseConfig =
           backend === "supabase"
             ? { url: options.supabaseUrl!, key: options.supabaseKey! }
@@ -66,7 +92,10 @@ export function makeInitCommand(): Command {
         await mkdir(targetDir, { recursive: true });
 
         // Write config
-        const config = getDefaultConfig(name, domain, backend, supabaseConfig);
+        const config = getDefaultConfig(name, domain, backend, {
+          git: gitConfig,
+          supabase: supabaseConfig,
+        });
         await saveConfig(targetDir, config);
 
         if (backend === "supabase") {
@@ -111,7 +140,7 @@ export function makeInitCommand(): Command {
             ),
           ]);
 
-          // Git init + initial commit (git backend only)
+          // Git init + initial commit + remote (git backend only)
           if (backend === "git") {
             const initResult = await git.init(targetDir);
             if (!initResult.ok) {
@@ -128,6 +157,21 @@ export function makeInitCommand(): Command {
                 console.error(
                   `Warning: initial commit failed: ${commitResult.output}`,
                 );
+              }
+
+              // Add remote and push if git config provided
+              if (gitConfig) {
+                const remoteUrl = `https://${gitConfig.token}@github.com/${gitConfig.repo}.git`;
+                await git.addRemote(targetDir, "origin", remoteUrl);
+                const branch = await git.currentBranch(targetDir);
+                const pushResult = await git.push(targetDir, "origin", branch);
+                if (pushResult.ok) {
+                  console.log(`Pushed to ${gitConfig.repo}`);
+                } else {
+                  console.error(
+                    `Warning: initial push failed: ${pushResult.output}`,
+                  );
+                }
               }
             }
           }

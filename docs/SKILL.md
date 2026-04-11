@@ -9,11 +9,11 @@ The CLI supports three storage backends:
 | Backend | Description | Init |
 |---------|-------------|------|
 | `filesystem` (default) | Plain markdown files on disk, no versioning | `wiki init my-wiki` |
-| `git` | Filesystem + auto-commit on every write/append + git commands | `wiki init my-wiki --backend git` |
+| `git` | Filesystem + auto-commit + auto-push to GitHub | `wiki init my-wiki --backend git --git-token <pat>` |
 | `supabase` | Pages stored in a Supabase database table | `wiki init my-wiki --backend supabase --supabase-url <url> --supabase-key <key>` |
 
 - **filesystem**: Simplest. Pages are `.md` files. No versioning.
-- **git**: Every `wiki write` and `wiki append` auto-commits. Git commands (`commit`, `push`, `pull`, `sync`, `history`, `diff`) only work with this backend.
+- **git**: Every `wiki write` and `wiki append` auto-commits and auto-pushes. Provide `--git-token` at init to enable GitHub sync. Omit for local-only git.
 - **supabase**: Pages stored in `wiki_pages` table. No local files. Requires `@supabase/supabase-js` installed.
 
 ## Critical Patterns
@@ -175,9 +175,10 @@ wiki search "neural networks" --all  # search across all wikis
 | Command | Description |
 |---------|-------------|
 | `wiki init [dir] --name <n> --domain <d> --backend <type>` | Create new wiki (backends: filesystem, git, supabase) |
+| `wiki init [dir] --backend git --git-token <pat> [--git-repo owner/repo]` | Create git-backed wiki with GitHub sync |
 | `wiki init [dir] --backend supabase --supabase-url <url> --supabase-key <key>` | Create Supabase-backed wiki |
 | `wiki registry` | List all registered wikis |
-| `wiki use [wiki-id]` | Set active wiki (interactive picker if no id) |
+| `wiki use [wiki-id]` | List wikis or set active wiki |
 
 ### Reading & Writing
 
@@ -217,8 +218,8 @@ wiki search "neural networks" --all  # search across all wikis
 
 3. **append fails if page doesn't exist** — use `wiki write` to create new pages, `wiki append` only for existing ones.
 
-5. **Wiki resolution** — if commands fail with "No wiki found", either `cd` into a wiki directory, run `wiki use <id>` to set a default, or pass `--wiki <id>`.
+4. **Wiki resolution** — if commands fail with "No wiki found", either `cd` into a wiki directory, run `wiki use <id>` to set a default, or pass `--wiki <id>`.
 
-6. **search --all** searches across all registered wikis, not just the active one.
+5. **search --all** searches across all registered wikis, not just the active one.
 
-7. **lint checks five things**: broken wikilinks, orphan pages, missing frontmatter, empty pages, and index consistency (pages not in index, index entries pointing to missing pages).
+6. **lint checks five things**: broken wikilinks, orphan pages, missing frontmatter, empty pages, and index consistency (pages not in index, index entries pointing to missing pages).

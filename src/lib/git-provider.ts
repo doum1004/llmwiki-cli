@@ -5,10 +5,12 @@ import type { StorageProvider } from "../types.ts";
 export class GitProvider implements StorageProvider {
   private wiki: WikiManager;
   public readonly root: string;
+  private gitConfig?: { token: string; repo: string };
 
-  constructor(root: string) {
+  constructor(root: string, gitConfig?: { token: string; repo: string }) {
     this.root = root;
     this.wiki = new WikiManager(root);
+    this.gitConfig = gitConfig;
   }
 
   async readPage(relativePath: string): Promise<string | null> {
@@ -39,5 +41,9 @@ export class GitProvider implements StorageProvider {
   private async autoCommit(message: string): Promise<void> {
     await git.addAll(this.root);
     await git.commit(this.root, message);
+    if (this.gitConfig) {
+      const branch = await git.currentBranch(this.root);
+      await git.push(this.root, "origin", branch);
+    }
   }
 }
