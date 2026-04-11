@@ -32,8 +32,8 @@ async function runWiki(args: string[], input?: string): Promise<{ stdout: string
   return { stdout, stderr, exitCode };
 }
 
-async function initWiki(name = "testwiki"): Promise<void> {
-  const result = await runWiki(["init", wikiDir, "--name", name, "--domain", "test"]);
+async function initWiki(name = "testwiki", backend = "filesystem"): Promise<void> {
+  const result = await runWiki(["init", wikiDir, "--name", name, "--domain", "test", "--backend", backend]);
   if (result.exitCode !== 0) {
     throw new Error(`Init failed: ${result.stderr}`);
   }
@@ -225,33 +225,31 @@ describe("log command", () => {
 
 describe("commit command", () => {
   it("commits changes with provided message", async () => {
-    await initWiki();
-    await runWiki(
-      ["-w", "testwiki", "write", "wiki/concepts/new.md"],
-      "New page content",
-    );
-    const result = await runWiki(["-w", "testwiki", "commit", "Add new concept page"]);
+    await initWiki("testwiki", "git");
+    // Modify a file directly (not via wiki write, which auto-commits)
+    const indexPath = join(wikiDir, "wiki/index.md");
+    const content = await readFile(indexPath, "utf-8");
+    await writeFile(indexPath, content + "\n- [[new-entry]]\n", "utf-8");
+    const result = await runWiki(["-w", "testwiki", "commit", "Add new entry"]);
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain("Add new concept page");
+    expect(result.stdout).toContain("Add new entry");
   });
 
   it("reports nothing to commit when clean", async () => {
-    await initWiki();
+    await initWiki("testwiki", "git");
     const result = await runWiki(["-w", "testwiki", "commit", "Empty commit"]);
     expect(result.stdout).toContain("Nothing to commit");
   });
 
-  it("auto-generates message from last log entry", async () => {
-    await initWiki();
-    await runWiki(["-w", "testwiki", "log", "append", "ingest", "Added attention paper"]);
+  it("auto-commits on wiki write with git backend", async () => {
+    await initWiki("testwiki", "git");
     await runWiki(
       ["-w", "testwiki", "write", "wiki/concepts/attention.md"],
       "Attention content",
     );
-    const result = await runWiki(["-w", "testwiki", "commit"]);
-    expect(result.exitCode).toBe(0);
-    // Should use the log entry message as commit message
-    expect(result.stdout).toContain("Added attention paper");
+    // Page was auto-committed, so manual commit has nothing to do
+    const result = await runWiki(["-w", "testwiki", "commit", "Manual commit"]);
+    expect(result.stdout).toContain("Nothing to commit");
   });
 });
 
@@ -380,29 +378,29 @@ describe("orphans command", () => {
 
 describe("history command", () => {
   it("shows git history for a page", async () => {
-    await initWiki();
+    await initWiki("testwiki", "git");
+    // wiki write auto-commits with git backend
     await runWiki(
       ["-w", "testwiki", "write", "wiki/concepts/tracked.md"],
       "Version 1",
     );
-    await runWiki(["-w", "testwiki", "commit", "Add tracked page"]);
     const result = await runWiki(["-w", "testwiki", "history", "wiki/concepts/tracked.md"]);
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain("Add tracked page");
+    expect(result.stdout).toContain("update wiki/concepts/tracked.md");
   });
 });
 
 describe("diff command", () => {
   it("shows no changes when working tree is clean", async () => {
-    await initWiki();
+    await initWiki("testwiki", "git");
     const result = await runWiki(["-w", "testwiki", "diff"]);
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain("No changes");
   });
 
   it("shows changes to tracked files", async () => {
-    await initWiki();
-    // Modify a tracked file (index.md was committed during init)
+    await initWiki("testwiki", "git");
+    // Modify a tracked file directly (not via wiki write, which auto-commits)
     const indexPath = join(wikiDir, "wiki/index.md");
     const content = await readFile(indexPath, "utf-8");
     await writeFile(indexPath, content + "\n## New Section\n", "utf-8");

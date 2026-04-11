@@ -10,7 +10,7 @@ import {
   getDefaultIndex,
   getDefaultLog,
 } from "../lib/templates.ts";
-import type { RegistryEntry } from "../types.ts";
+import type { BackendType, RegistryEntry } from "../types.ts";
 
 export function makeInitCommand(): Command {
   return new Command("init")
@@ -18,11 +18,13 @@ export function makeInitCommand(): Command {
     .argument("[dir]", "directory to initialize (defaults to cwd)")
     .option("-n, --name <name>", "wiki name")
     .option("-d, --domain <domain>", "knowledge domain", "general")
+    .option("-b, --backend <type>", "storage backend (filesystem, git, supabase)", "filesystem")
     .action(
       async (
         dir: string | undefined,
-        options: { name?: string; domain: string },
+        options: { name?: string; domain: string; backend: string },
       ) => {
+        const backend = options.backend as BackendType;
         const targetDir = resolve(dir ?? ".");
         const name = options.name ?? basename(targetDir);
         const domain = options.domain;
@@ -41,7 +43,7 @@ export function makeInitCommand(): Command {
         await Promise.all(dirs.map((d) => mkdir(d, { recursive: true })));
 
         // Write config
-        const config = getDefaultConfig(name, domain);
+        const config = getDefaultConfig(name, domain, backend);
         await saveConfig(targetDir, config);
 
         // Write template files
@@ -51,20 +53,22 @@ export function makeInitCommand(): Command {
           writeFile(resolve(targetDir, "wiki/log.md"), getDefaultLog(), "utf-8"),
         ]);
 
-        // Git init + initial commit
-        const initResult = await git.init(targetDir);
-        if (!initResult.ok) {
-          console.error(`Warning: git init failed: ${initResult.output}`);
-        } else {
-          await git.addAll(targetDir);
-          const commitResult = await git.commit(
-            targetDir,
-            "Initialize wiki",
-          );
-          if (!commitResult.ok) {
-            console.error(
-              `Warning: initial commit failed: ${commitResult.output}`,
+        // Git init + initial commit (git backend only)
+        if (backend === "git") {
+          const initResult = await git.init(targetDir);
+          if (!initResult.ok) {
+            console.error(`Warning: git init failed: ${initResult.output}`);
+          } else {
+            await git.addAll(targetDir);
+            const commitResult = await git.commit(
+              targetDir,
+              "Initialize wiki",
             );
+            if (!commitResult.ok) {
+              console.error(
+                `Warning: initial commit failed: ${commitResult.output}`,
+              );
+            }
           }
         }
 

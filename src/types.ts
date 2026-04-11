@@ -1,4 +1,4 @@
-export type BackendType = "filesystem";
+export type BackendType = "filesystem" | "git" | "supabase";
 
 export interface StorageProvider {
   readPage(relativePath: string): Promise<string | null>;

@@ -3,6 +3,8 @@ import { mkdtemp, rm } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
 import { createProvider } from "../src/lib/storage.ts";
+import { GitProvider } from "../src/lib/git-provider.ts";
+import * as git from "../src/lib/git.ts";
 import type { StorageProvider } from "../src/types.ts";
 
 let testDir: string;
@@ -25,6 +27,17 @@ describe("createProvider", () => {
     expect(provider.appendPage).toBeInstanceOf(Function);
     expect(provider.pageExists).toBeInstanceOf(Function);
     expect(provider.listPages).toBeInstanceOf(Function);
+  });
+
+  it("creates a git provider", () => {
+    const gitProvider = createProvider("git", testDir);
+    expect(gitProvider).toBeInstanceOf(GitProvider);
+  });
+
+  it("throws for supabase (not yet implemented)", () => {
+    expect(() => createProvider("supabase", testDir)).toThrow(
+      "Supabase backend not yet implemented",
+    );
   });
 
   it("throws for unknown backend", () => {
@@ -82,5 +95,58 @@ describe("StorageProvider contract (filesystem)", () => {
     const pages = await provider.listPages("sub");
     expect(pages).toContain("sub/child.md");
     expect(pages).not.toContain("root.md");
+  });
+});
+
+describe("GitProvider", () => {
+  let gitDir: string;
+  let gitProvider: StorageProvider;
+
+  beforeEach(async () => {
+    gitDir = await mkdtemp(join(tmpdir(), "llmwiki-git-"));
+    await git.init(gitDir);
+    gitProvider = createProvider("git", gitDir);
+  });
+
+  afterEach(async () => {
+    await rm(gitDir, { recursive: true, force: true });
+  });
+
+  it("writePage stores content and auto-commits", async () => {
+    await gitProvider.writePage("test.md", "hello");
+    const content = await gitProvider.readPage("test.md");
+    expect(content).toBe("hello");
+    const log = await git.log(gitDir, 1);
+    expect(log.ok).toBe(true);
+    expect(log.output).toContain("update test.md");
+  });
+
+  it("appendPage auto-commits on success", async () => {
+    await gitProvider.writePage("page.md", "first\n");
+    await gitProvider.appendPage("page.md", "second");
+    const log = await git.log(gitDir, 2);
+    expect(log.ok).toBe(true);
+    expect(log.output).toContain("append to page.md");
+  });
+
+  it("appendPage does not commit on missing page", async () => {
+    const ok = await gitProvider.appendPage("missing.md", "nope");
+    expect(ok).toBe(false);
+    const log = await git.log(gitDir, 1);
+    // No commits should exist (or only prior ones)
+    expect(log.output).not.toContain("append to missing.md");
+  });
+
+  it("readPage returns null for missing page", async () => {
+    const content = await gitProvider.readPage("nope.md");
+    expect(content).toBeNull();
+  });
+
+  it("listPages works like filesystem", async () => {
+    await gitProvider.writePage("a.md", "a");
+    await gitProvider.writePage("sub/b.md", "b");
+    const pages = await gitProvider.listPages();
+    expect(pages).toContain("a.md");
+    expect(pages).toContain("sub/b.md");
   });
 });

@@ -282,7 +282,7 @@ describe("templates", () => {
 // --- init integration ---
 
 describe("init command (integration)", () => {
-  it("creates all directories and files", async () => {
+  it("creates all directories and files (filesystem)", async () => {
     const wikiDir = join(testDir, "mywiki");
     const proc = Bun.spawn(
       ["bun", "run", "bin/wiki.ts", "init", wikiDir, "--name", "mywiki", "--domain", "test"],
@@ -309,7 +309,31 @@ describe("init command (integration)", () => {
     expect(await Bun.file(join(wikiDir, "wiki/index.md")).exists()).toBe(true);
     expect(await Bun.file(join(wikiDir, "wiki/log.md")).exists()).toBe(true);
 
-    // Check git
+    // Filesystem backend should NOT have .git
+    let hasGit = true;
+    try { await stat(join(wikiDir, ".git")); } catch { hasGit = false; }
+    expect(hasGit).toBe(false);
+  });
+
+  it("creates git repo with --backend git", async () => {
+    const wikiDir = join(testDir, "gitwiki");
+    const proc = Bun.spawn(
+      ["bun", "run", "bin/wiki.ts", "init", wikiDir, "--name", "gitwiki", "--backend", "git"],
+      {
+        cwd: process.cwd(),
+        stdout: "pipe",
+        stderr: "pipe",
+        env: {
+          ...process.env,
+          GIT_AUTHOR_NAME: "Test",
+          GIT_AUTHOR_EMAIL: "test@test.com",
+          GIT_COMMITTER_NAME: "Test",
+          GIT_COMMITTER_EMAIL: "test@test.com",
+        },
+      },
+    );
+    await proc.exited;
+
     const gitStat = await stat(join(wikiDir, ".git"));
     expect(gitStat.isDirectory()).toBe(true);
   });

@@ -1,11 +1,15 @@
-import type { WikiConfig } from "../types.ts";
+import type { WikiConfig, BackendType } from "../types.ts";
 
-export function getDefaultConfig(name: string, domain: string): WikiConfig {
+export function getDefaultConfig(
+  name: string,
+  domain: string,
+  backend: BackendType = "filesystem",
+): WikiConfig {
   return {
     name,
     domain,
     created: new Date().toISOString(),
-    backend: "filesystem" as const,
+    backend,
     paths: {
       raw: "raw",
       wiki: "wiki",

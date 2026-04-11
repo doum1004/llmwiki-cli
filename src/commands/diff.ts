@@ -1,6 +1,6 @@
 import { Command } from "commander";
 import * as git from "../lib/git.ts";
-import { requireFilesystem } from "../lib/storage.ts";
+import { requireGit } from "../lib/storage.ts";
 import type { WikiContext } from "../types.ts";
 
 export function makeDiffCommand(): Command {
@@ -9,7 +9,7 @@ export function makeDiffCommand(): Command {
     .argument("[ref]", "commit ref to show (default: uncommitted changes)")
     .action(async function (this: Command, ref: string | undefined) {
       const ctx: WikiContext = this.optsWithGlobals().wikiContext;
-      requireFilesystem(ctx, "diff");
+      requireGit(ctx, "diff");
       const result = await git.diff(ctx.root, ref);
 
       if (!result.ok) {

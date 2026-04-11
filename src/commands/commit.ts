@@ -1,7 +1,7 @@
 import { Command } from "commander";
 import * as git from "../lib/git.ts";
 import { LogManager } from "../lib/log-manager.ts";
-import { requireFilesystem } from "../lib/storage.ts";
+import { requireGit } from "../lib/storage.ts";
 import type { WikiContext } from "../types.ts";
 
 export function makeCommitCommand(): Command {
@@ -10,7 +10,7 @@ export function makeCommitCommand(): Command {
     .argument("[message]", "commit message")
     .action(async function (this: Command, message: string | undefined) {
       const ctx: WikiContext = this.optsWithGlobals().wikiContext;
-      requireFilesystem(ctx, "commit");
+      requireGit(ctx, "commit");
 
       // Auto-generate message from last log entry if not provided
       if (!message) {

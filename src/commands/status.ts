@@ -49,7 +49,7 @@ export function makeStatusCommand(): Command {
 
       // Git info (filesystem backend only)
       let gitInfo = { commits: "N/A", hasRemote: false };
-      if ((ctx.config.backend ?? "filesystem") === "filesystem") {
+      if (ctx.config.backend === "git") {
         const gitLog = await git.log(ctx.root, 1);
         const commitCount = gitLog.ok ? (await git.log(ctx.root, 99999)).output.split("\n").filter(Boolean).length.toString() : "0";
         const remote = await git.hasRemote(ctx.root);

@@ -1,6 +1,6 @@
 import { Command } from "commander";
 import * as git from "../lib/git.ts";
-import { requireFilesystem } from "../lib/storage.ts";
+import { requireGit } from "../lib/storage.ts";
 import type { WikiContext } from "../types.ts";
 
 export function makeSyncCommand(): Command {
@@ -8,7 +8,7 @@ export function makeSyncCommand(): Command {
     .description("Pull then push (sync with remote)")
     .action(async function (this: Command) {
       const ctx: WikiContext = this.optsWithGlobals().wikiContext;
-      requireFilesystem(ctx, "sync");
+      requireGit(ctx, "sync");
 
       if (!(await git.hasRemote(ctx.root))) {
         console.error('No remote configured. Use "wiki repo connect" to add one.');
