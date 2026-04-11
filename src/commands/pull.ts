@@ -20,6 +20,12 @@ export function makePullCommand(): Command {
         process.exit(1);
       }
 
+      if (await git.hasConflicts(ctx.root)) {
+        console.error("Pull succeeded but there are merge conflicts to resolve.");
+        console.log("Fix the conflicts, then: git add <files> && git rebase --continue");
+        process.exit(1);
+      }
+
       console.log(result.output || "Already up to date.");
     });
 }

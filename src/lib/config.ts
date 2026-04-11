@@ -9,6 +9,11 @@ export async function loadConfig(dir: string): Promise<WikiConfig | null> {
   const configPath = join(dir, CONFIG_FILENAME);
   try {
     const content = await readFile(configPath, "utf-8");
+    if (content.includes("<<<<<<<") && content.includes(">>>>>>>")) {
+      throw new Error(
+        `.llmwiki.yaml has unresolved merge conflicts. Resolve them, then run:\n  git add ${CONFIG_FILENAME} && git rebase --continue`,
+      );
+    }
     return yaml.load(content) as WikiConfig;
   } catch (err: unknown) {
     if (err instanceof Error && "code" in err && (err as NodeJS.ErrnoException).code === "ENOENT") {

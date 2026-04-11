@@ -53,6 +53,12 @@ export async function listRepos(options?: {
   return repos;
 }
 
+export async function getRepo(owner: string, name: string): Promise<GitHubRepo | null> {
+  const res = await githubFetch(`/repos/${owner}/${name}`);
+  if (!res.ok) return null;
+  return (await res.json()) as GitHubRepo;
+}
+
 export async function createRepo(
   name: string,
   options?: { private?: boolean; description?: string },

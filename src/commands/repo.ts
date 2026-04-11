@@ -1,7 +1,7 @@
 import { Command } from "commander";
 import { resolve, basename } from "path";
 import { homedir } from "os";
-import { listRepos, createRepo } from "../lib/github.ts";
+import { listRepos, createRepo, getRepo } from "../lib/github.ts";
 import { loadAuth } from "../lib/auth.ts";
 import { promptUser } from "../lib/prompt.ts";
 import { loadConfig } from "../lib/config.ts";
@@ -71,8 +71,17 @@ export function makeRepoCommand(): Command {
             description: `LLM Wiki: ${name} (${options.domain})`,
           });
         } catch (err: any) {
-          console.error(err.message);
-          process.exit(1);
+          if (err.message?.includes("already exists")) {
+            console.log(`Repo "${repoName}" already exists, connecting to it...`);
+            repo = await getRepo(auth.username, repoName);
+            if (!repo) {
+              console.error(`Could not find repo "${repoName}" on your account.`);
+              process.exit(1);
+            }
+          } else {
+            console.error(err.message);
+            process.exit(1);
+          }
         }
 
         console.log(`Created: ${repo.html_url}`);
@@ -216,19 +225,39 @@ export function makeRepoCommand(): Command {
           description: `LLM Wiki: ${ctx.config.name} (${ctx.config.domain})`,
         });
       } catch (err: any) {
-        console.error(err.message);
-        process.exit(1);
+        if (err.message?.includes("already exists")) {
+          console.log(`Repo "${repoName}" already exists, connecting to it...`);
+          repo = await getRepo(auth.username, repoName);
+          if (!repo) {
+            console.error(`Could not find repo "${repoName}" on your account.`);
+            process.exit(1);
+          }
+        } else {
+          console.error(err.message);
+          process.exit(1);
+        }
       }
 
       await git.addRemote(ctx.root, "origin", repo.ssh_url);
       const branch = await git.currentBranch(ctx.root);
-      const pushResult = await git.push(ctx.root, "origin", branch);
 
+      // Fetch and pull to merge any existing remote history
+      await git.fetch(ctx.root, "origin");
+      const pullResult = await git.pullRebaseAllowUnrelated(ctx.root, "origin", branch);
+      if (!pullResult.ok || await git.hasConflicts(ctx.root)) {
+        console.error("Remote added but there are merge conflicts.");
+        console.log("Resolve conflicts in .llmwiki.yaml, then run:");
+        console.log("  git add .llmwiki.yaml && git rebase --continue");
+        console.log("  wiki push");
+        process.exit(1);
+      }
+
+      const pushResult = await git.push(ctx.root, "origin", branch);
       if (pushResult.ok) {
         console.log(`Connected and pushed to ${repo.html_url}`);
       } else {
         console.error(`Remote added but push failed: ${pushResult.output}`);
-        console.log(`Try: git push -u origin ${branch}`);
+        console.log(`Try: wiki sync`);
       }
     });
 

@@ -22,7 +22,8 @@
       "Bash(npm pkg:*)",
       "Bash(npm view:*)",
       "Bash(gh repo:*)",
-      "Bash(gh auth:*)"
+      "Bash(gh auth:*)",
+      "Bash(grep -E \"\\\\.\\(ts|js\\)$\")"
     ]
   }
 }

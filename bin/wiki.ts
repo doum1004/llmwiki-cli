@@ -68,8 +68,14 @@ const SKIP_RESOLUTION = new Set(["init", "registry", "use", "auth"]);
 program.hook("preAction", async (thisCommand, actionCommand) => {
   if (SKIP_RESOLUTION.has(actionCommand.name())) return;
 
-  const globalOpts = thisCommand.optsWithGlobals<GlobalOptions>();
-  const context = await resolveWiki(globalOpts);
+  let context;
+  try {
+    const globalOpts = thisCommand.optsWithGlobals<GlobalOptions>();
+    context = await resolveWiki(globalOpts);
+  } catch (err: any) {
+    console.error(err.message);
+    process.exit(1);
+  }
 
   if (!context) {
     console.error(

@@ -59,8 +59,21 @@ export function push(cwd: string, remote = "origin", branch = "main"): Promise<G
   return run(["push", "-u", remote, branch], cwd);
 }
 
+export function fetch(cwd: string, remote = "origin"): Promise<GitResult> {
+  return run(["fetch", remote], cwd);
+}
+
 export function pull(cwd: string, remote = "origin", branch = "main"): Promise<GitResult> {
   return run(["pull", remote, branch, "--rebase"], cwd);
+}
+
+export function pullRebaseAllowUnrelated(cwd: string, remote = "origin", branch = "main"): Promise<GitResult> {
+  return run(["pull", remote, branch, "--rebase", "--allow-unrelated-histories"], cwd);
+}
+
+export async function hasConflicts(cwd: string): Promise<boolean> {
+  const result = await run(["diff", "--name-only", "--diff-filter=U"], cwd);
+  return result.ok && result.output.length > 0;
 }
 
 export function clone(url: string, dest: string): Promise<GitResult> {

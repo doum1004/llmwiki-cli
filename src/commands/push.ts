@@ -16,7 +16,11 @@ export function makePushCommand(): Command {
       const branch = await git.currentBranch(ctx.root);
       const result = await git.push(ctx.root, "origin", branch);
       if (!result.ok) {
-        console.error(`Push failed: ${result.output}`);
+        if (result.output.includes("fetch first") || result.output.includes("non-fast-forward")) {
+          console.error("Push rejected: remote has new changes. Run \"wiki pull\" or \"wiki sync\" first.");
+        } else {
+          console.error(`Push failed: ${result.output}`);
+        }
         process.exit(1);
       }
 
