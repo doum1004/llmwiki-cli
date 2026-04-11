@@ -124,8 +124,7 @@ wiki index add "sources/attention-paper.md" "Attention Is All You Need (2017)"
 wiki index add "concepts/transformers.md" "Transformer architecture overview"
 wiki log append ingest "Attention paper and transformer concepts"
 
-# 5. Commit (git backend only — auto-committed on write for git backend)
-wiki commit "ingest: attention paper"
+# Done — git backend auto-commits on write
 ```
 
 ### Answer a question using the wiki
@@ -158,20 +157,6 @@ wiki status                          # overview stats
 # 3. Fix issues: add frontmatter, create missing pages, connect orphans
 # 4. Log fixes (git backend auto-commits on write)
 wiki log append maintenance "Fixed broken links and orphan pages"
-```
-
-### Sync to GitHub
-
-```bash
-# One-time setup
-wiki auth login                      # authenticate with GitHub PAT
-wiki repo create my-wiki             # creates private repo + connects
-
-# After making changes
-wiki push
-
-# Or pull + push in one step
-wiki sync
 ```
 
 ### Multi-wiki operations
@@ -214,16 +199,6 @@ wiki search "neural networks" --all  # search across all wikis
 | `wiki log show [--last N] [--type T]` | Print log entries (filter by count/type) |
 | `wiki log append <type> <message>` | Append log entry (types: ingest, query, maintenance, etc.) |
 
-### Git Operations (git backend only)
-
-| Command | Description |
-|---------|-------------|
-| `wiki commit [message]` | Git add + commit (auto-message from last log entry if omitted) |
-| `wiki history [path] [--last N]` | Git log (optionally for a specific page) |
-| `wiki diff [ref]` | Git diff (optionally against a ref) |
-
-> Note: With git backend, `wiki write` and `wiki append` auto-commit. Manual `wiki commit` is for custom commit messages or changes made outside the CLI.
-
 ### Health & Links
 
 | Command | Description |
@@ -234,30 +209,13 @@ wiki search "neural networks" --all  # search across all wikis
 | `wiki orphans` | List pages with no inbound links |
 | `wiki status [--json]` | Wiki overview: page counts, link stats, recent activity, git info |
 
-### GitHub Sync (git backend only)
-
-| Command | Description |
-|---------|-------------|
-| `wiki auth login` | Authenticate with GitHub PAT |
-| `wiki auth status` | Show current auth status |
-| `wiki auth logout` | Remove stored credentials |
-| `wiki repo list [--all] [--filter F]` | List GitHub repos |
-| `wiki repo create <name> [--domain D] [--public]` | Create repo + init wiki |
-| `wiki repo clone [name] [--dir D]` | Clone repo + register as wiki |
-| `wiki repo connect [wiki-id]` | Connect existing wiki to new GitHub repo |
-| `wiki push` | Git push to remote |
-| `wiki pull` | Git pull from remote |
-| `wiki sync` | Pull then push |
-
 ## Gotchas
 
 1. **Always use heredoc for write/append** — these commands read stdin, not arguments. Running `wiki write path.md "content"` will hang waiting for stdin.
 
 2. **Always update index + log** — after creating or modifying pages, call `wiki index add` and `wiki log append`. The `wiki lint` command checks for pages missing from the index.
 
-3. **Git commands require git backend** — `commit`, `push`, `pull`, `sync`, `history`, `diff` only work when `backend: git`. With git backend, writes auto-commit.
-
-4. **append fails if page doesn't exist** — use `wiki write` to create new pages, `wiki append` only for existing ones.
+3. **append fails if page doesn't exist** — use `wiki write` to create new pages, `wiki append` only for existing ones.
 
 5. **Wiki resolution** — if commands fail with "No wiki found", either `cd` into a wiki directory, run `wiki use <id>` to set a default, or pass `--wiki <id>`.
 

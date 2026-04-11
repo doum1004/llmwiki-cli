@@ -118,13 +118,6 @@ wiki log show [--last N] [--type T] # Print log entries
 wiki log append <type> <message>    # Append log entry
 ```
 
-### Git Operations (git backend only)
-```
-wiki commit [message]               # Git add + commit (auto-message from last log entry)
-wiki history [path] [--last N]      # Git log
-wiki diff [ref]                     # Git diff
-```
-
 ### Health & Links
 ```
 wiki lint [--json]                  # Check wiki health (broken links, orphans, frontmatter, index)
@@ -132,20 +125,6 @@ wiki links <path>                   # Outbound + inbound links
 wiki backlinks <path>               # Inbound links only
 wiki orphans                        # Pages with no inbound links
 wiki status [--json]                # Wiki overview stats
-```
-
-### GitHub Sync (git backend only)
-```
-wiki auth login                     # Authenticate with GitHub PAT
-wiki auth status                    # Show auth status
-wiki auth logout                    # Remove credentials
-wiki repo list [--all] [--filter]   # List your GitHub repos
-wiki repo create <name>             # Create repo + init wiki
-wiki repo clone [name] [--dir]      # Clone repo + register
-wiki repo connect [wiki-id]         # Connect wiki to new GitHub repo
-wiki push                           # Git push
-wiki pull                           # Git pull
-wiki sync                           # Pull + push
 ```
 
 ## Architecture

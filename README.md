@@ -19,12 +19,11 @@ The CLI is the hands -- it reads, writes, searches, and manages wiki files. The 
 LLM Agent (Claude Code / Codex)
 |
 | shells out to:
-|   $ wiki init my-wiki --backend git --domain "machine learning"
+|   $ wiki init my-wiki --domain "machine learning"
 |   $ wiki write wiki/concepts/attention.md <<'EOF' ... EOF
 |   $ wiki index add "concepts/attention.md" "Overview of attention"
 |   $ wiki search "scaling laws"
 |   $ wiki lint
-|   $ wiki push
 |
 v
 wiki CLI (StorageProvider abstraction)
@@ -130,13 +129,6 @@ wiki log show [--last N] [--type T]                 # Print log entries
 wiki log append <type> <message>                    # Append log entry
 ```
 
-### Git Operations (git backend only)
-```bash
-wiki commit [message]                               # Git add + commit
-wiki history [path] [--last N]                      # Git log
-wiki diff [ref]                                     # Git diff
-```
-
 ### Health & Links
 ```bash
 wiki lint [--json]                                  # Health check
@@ -144,20 +136,6 @@ wiki links <path>                                   # Outbound + inbound links
 wiki backlinks <path>                               # Inbound links only
 wiki orphans                                        # Pages with no inbound links
 wiki status [--json]                                # Wiki overview stats
-```
-
-### GitHub Sync (git backend only)
-```bash
-wiki auth login                                     # Authenticate with GitHub PAT
-wiki auth status                                    # Show auth status
-wiki auth logout                                    # Remove credentials
-wiki repo list [--all] [--filter]                   # List your GitHub repos
-wiki repo create <name> [--domain] [--public]       # Create repo + init wiki
-wiki repo clone [name] [--dir]                      # Clone repo + register
-wiki repo connect [wiki-id]                         # Connect wiki to new GitHub repo
-wiki push                                           # Git push
-wiki pull                                           # Git pull
-wiki sync                                           # Pull + push
 ```
 
 ## LLM Agent Skill Guide
@@ -205,14 +183,6 @@ wiki log append query "How does multi-head attention work?"
 wiki lint                  # find broken links, orphans, missing frontmatter
 wiki orphans               # pages nobody links to
 wiki status                # overview stats
-```
-
-### Sync to GitHub
-```bash
-wiki auth login            # one-time setup with GitHub PAT
-wiki repo create research  # creates private wiki-research repo
-wiki push                  # after making changes
-wiki sync                  # pull + push
 ```
 
 ## Multi-Wiki Support
