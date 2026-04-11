@@ -2,6 +2,23 @@
 
 <!-- New entries are prepended automatically by the publish workflow -->
 
+## v0.2.1 — 2026-04-11
+
+### Changes
+
+- refactor: remove deprecated commands and authentication logic (bf2ddb1)
+- feat: implement tests for SupabaseProvider and GitProvider, and refactor StorageProvider tests (0d62175)
+- refactor: remove Git backend commands from documentation (a346a2f)
+- feat: update documentation to reflect StorageProvider abstraction and backend options (d0d4f23)
+- feat: add Supabase backend support for wiki storage and commands (5ed99c7)
+- feat: implement Git backend support for wiki storage and commands (9e8f913)
+- Refactor storage management and command handling (2a591b6)
+
+**Full diff:** [v0.1.5...v0.2.1](https://github.com/doum1004/llmwiki-cli/compare/v0.1.5...v0.2.1)
+
+---
+
+
 ## v0.1.5 — 2026-04-11
 
 ### Changes
