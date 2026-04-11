@@ -6,7 +6,7 @@ export class SupabaseProvider implements StorageProvider {
   private client: any;
   private wikiId: string;
 
-  private constructor(client: any, wikiId: string) {
+  constructor(client: any, wikiId: string) {
     this.client = client;
     this.wikiId = wikiId;
   }
