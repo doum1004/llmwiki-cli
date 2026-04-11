@@ -18,14 +18,15 @@ import {
 } from "../lib/templates.ts";
 import type { BackendType, RegistryEntry } from "../types.ts";
 
-const SUPABASE_SQL = `-- Run this in your Supabase SQL Editor:
-create table if not exists wiki_pages (
+const SUPABASE_SQL_RAW = `create table if not exists wiki_pages (
   wiki_id text not null,
   path text not null,
   content text not null,
   updated_at timestamptz default now(),
   primary key (wiki_id, path)
-);`;
+)`;
+
+const SUPABASE_SQL = `-- Run this in your Supabase SQL Editor:\n${SUPABASE_SQL_RAW};`;
 
 export function makeInitCommand(): Command {
   return new Command("init")
@@ -174,16 +175,28 @@ export function makeInitCommand(): Command {
         await saveConfig(targetDir, config);
 
         if (backend === "supabase") {
-          // Supabase: write initial pages via provider
+          // Supabase: check if table exists before writing initial pages
           const provider = await createProvider(config, targetDir);
-          await provider.writePage("SCHEMA.md", getDefaultSchema(name, domain));
-          await provider.writePage("wiki/index.md", getDefaultIndex());
-          await provider.writePage("wiki/log.md", getDefaultLog());
+          let tableExists = true;
+          try {
+            await provider.listPages();
+          } catch {
+            tableExists = false;
+          }
 
-          console.log(`\n${SUPABASE_SQL}\n`);
-          console.log(
-            "Make sure the wiki_pages table exists in your Supabase project.",
-          );
+          if (tableExists) {
+            await provider.writePage("SCHEMA.md", getDefaultSchema(name, domain));
+            await provider.writePage("wiki/index.md", getDefaultIndex());
+            await provider.writePage("wiki/log.md", getDefaultLog());
+          } else {
+            console.log(`\n${SUPABASE_SQL}\n`);
+            console.log(
+              "Table wiki_pages not found. Run the SQL above in your Supabase SQL Editor,",
+            );
+            console.log(
+              "then re-run this command.",
+            );
+          }
         } else {
           // Filesystem/git: create local directory structure + files
           const dirs = [

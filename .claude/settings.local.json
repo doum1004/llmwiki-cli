@@ -30,7 +30,9 @@
       "Bash(npm test:*)",
       "Bash(npx tsc:*)",
       "Bash(grep -r \"export\\\\|json\\\\|format\" /c/Workspace/Personal/llm-wiki/docs/*.md)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(npm install:*)",
+      "Bash(npm uninstall:*)"
     ]
   }
 }
