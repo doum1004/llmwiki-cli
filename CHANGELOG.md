@@ -2,6 +2,27 @@
 
 <!-- New entries are prepended automatically by the publish workflow -->
 
+## v0.1.5 — 2026-04-11
+
+### Changes
+
+- feat: add Git author and committer environment variables to runWiki function (3157fbe)
+- feat: add skill command to print LLM agent skill guide and update documentation references (a6df78d)
+- feat: add LLM Agent Skill Guide for improved CLI usage reference (65d9196)
+- feat: add npm test command to settings and update test count in README (2fe13f4)
+- Add comprehensive tests for Git operations, GitHub API interactions, and WikiManager functionality (cf49167)
+- feat: enhance error handling and conflict resolution in git commands (d74498f)
+- feat: enhance git commands to use current branch for pull and push operations (987dc62)
+- fix: update context retrieval in index and log commands to use optsWithGlobals directly (e8df760)
+- feat: implement promptUser function for user input handling in authentication and repository commands (c01191d)
+- feat: add GitHub CLI permissions for repository management and authentication (86ca9f0)
+- Update README.md (f332b54)
+
+**Full diff:** [v0.1.4...v0.1.5](https://github.com/doum1004/llmwiki-cli/compare/v0.1.4...v0.1.5)
+
+---
+
+
 ## v0.1.4 — 2026-04-10
 
 ### Changes
