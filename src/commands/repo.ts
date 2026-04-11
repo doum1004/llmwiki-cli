@@ -7,6 +7,7 @@ import { promptUser } from "../lib/prompt.ts";
 import { loadConfig } from "../lib/config.ts";
 import { addToRegistry } from "../lib/registry.ts";
 import * as git from "../lib/git.ts";
+import { createProvider } from "../lib/storage.ts";
 import type { WikiContext, RegistryEntry } from "../types.ts";
 
 export function makeRepoCommand(): Command {
@@ -204,7 +205,8 @@ export function makeRepoCommand(): Command {
           console.error(`Wiki "${wikiId}" not found.`);
           process.exit(1);
         }
-        ctx = resolved;
+        const backend = resolved.config.backend ?? "filesystem";
+        ctx = { ...resolved, provider: createProvider(backend, resolved.root) };
       } else {
         ctx = this.optsWithGlobals().wikiContext;
       }

@@ -1,5 +1,4 @@
 import { Command } from "commander";
-import { WikiManager } from "../lib/wiki.ts";
 import type { WikiContext } from "../types.ts";
 
 async function readStdin(): Promise<string> {
@@ -21,8 +20,7 @@ export function makeWriteCommand(): Command {
         console.error("No content provided on stdin.");
         process.exit(1);
       }
-      const wiki = new WikiManager(ctx.root);
-      await wiki.writePage(pagePath, content);
+      await ctx.provider.writePage(pagePath, content);
       console.log(`wrote ${pagePath}`);
     });
 }

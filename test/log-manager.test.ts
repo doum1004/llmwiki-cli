@@ -3,16 +3,19 @@ import { mkdtemp, rm, writeFile } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
 import { LogManager } from "../src/lib/log-manager.ts";
+import { WikiManager } from "../src/lib/wiki.ts";
 
 let testDir: string;
 let logPath: string;
+let wiki: WikiManager;
 let mgr: LogManager;
 
 beforeEach(async () => {
   testDir = await mkdtemp(join(tmpdir(), "llmwiki-log-"));
   logPath = join(testDir, "log.md");
   await writeFile(logPath, "# Activity Log\n", "utf-8");
-  mgr = new LogManager(logPath);
+  wiki = new WikiManager(testDir);
+  mgr = new LogManager(wiki, "log.md");
 });
 
 afterEach(async () => {
@@ -89,8 +92,7 @@ describe("LogManager", () => {
   });
 
   it("append to missing log file creates it", async () => {
-    const newLogPath = join(testDir, "new-log.md");
-    const newMgr = new LogManager(newLogPath);
+    const newMgr = new LogManager(wiki, "new-log.md");
     await newMgr.append("init", "Created");
     const entries = await newMgr.show();
     expect(entries).toHaveLength(1);

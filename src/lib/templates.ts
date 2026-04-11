@@ -5,6 +5,7 @@ export function getDefaultConfig(name: string, domain: string): WikiConfig {
     name,
     domain,
     created: new Date().toISOString(),
+    backend: "filesystem" as const,
     paths: {
       raw: "raw",
       wiki: "wiki",

@@ -1,6 +1,4 @@
 import { Command } from "commander";
-import { join } from "path";
-import { WikiManager } from "../lib/wiki.ts";
 import { buildLinkGraph } from "../lib/link-parser.ts";
 import { hasFrontmatter } from "../lib/frontmatter.ts";
 import { IndexManager } from "../lib/index-manager.ts";
@@ -18,11 +16,10 @@ export function makeLintCommand(): Command {
     .option("--json", "output as JSON")
     .action(async function (this: Command, options: { json?: boolean }) {
       const ctx: WikiContext = this.optsWithGlobals().wikiContext;
-      const wiki = new WikiManager(ctx.root);
       const issues: LintIssue[] = [];
 
       // Build link graph
-      const graph = await buildLinkGraph(wiki);
+      const graph = await buildLinkGraph(ctx.provider);
 
       // Broken links
       for (const { source, target } of graph.brokenLinks) {
@@ -43,9 +40,9 @@ export function makeLintCommand(): Command {
       }
 
       // Missing frontmatter and empty pages
-      const pages = await wiki.listPages();
+      const pages = await ctx.provider.listPages();
       for (const page of pages) {
-        const content = await wiki.readPage(page);
+        const content = await ctx.provider.readPage(page);
         if (!content) continue;
 
         if (!hasFrontmatter(content)) {
@@ -67,7 +64,7 @@ export function makeLintCommand(): Command {
       }
 
       // Index consistency
-      const indexMgr = new IndexManager(join(ctx.root, "wiki/index.md"));
+      const indexMgr = new IndexManager(ctx.provider);
       const indexContent = await indexMgr.read();
       for (const page of pages) {
         if (page === "wiki/index.md" || page === "wiki/log.md") continue;
@@ -85,7 +82,7 @@ export function makeLintCommand(): Command {
       const indexLinks = indexContent.match(/\[\[([^\]]+)\]\]/g) || [];
       for (const link of indexLinks) {
         const path = link.slice(2, -2);
-        if (!(await wiki.pageExists(path))) {
+        if (!(await ctx.provider.pageExists(path))) {
           issues.push({
             type: "missing-page",
             message: `In index but file missing: ${path}`,

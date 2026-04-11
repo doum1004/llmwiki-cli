@@ -1,7 +1,10 @@
-import { readFile, writeFile } from "fs/promises";
+import type { StorageProvider } from "../types.ts";
 
 export class LogManager {
-  constructor(private readonly logPath: string) {}
+  constructor(
+    private readonly provider: StorageProvider,
+    private readonly pagePath: string = "wiki/log.md",
+  ) {}
 
   async append(type: string, message: string): Promise<void> {
     let content = await this.readRaw();
@@ -12,7 +15,7 @@ export class LogManager {
     const entry = `## [${now}] ${type} | ${message}\n`;
     const separator = content.endsWith("\n") ? "" : "\n";
     content = content + separator + "\n" + entry;
-    await writeFile(this.logPath, content, "utf-8");
+    await this.provider.writePage(this.pagePath, content);
   }
 
   async show(options?: {
@@ -53,10 +56,6 @@ export class LogManager {
   }
 
   private async readRaw(): Promise<string> {
-    try {
-      return await readFile(this.logPath, "utf-8");
-    } catch {
-      return "";
-    }
+    return (await this.provider.readPage(this.pagePath)) ?? "";
   }
 }

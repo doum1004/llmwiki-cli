@@ -1,4 +1,4 @@
-import { readFile, writeFile } from "fs/promises";
+import type { StorageProvider } from "../types.ts";
 
 const SECTIONS = ["Sources", "Entities", "Concepts", "Synthesis"] as const;
 
@@ -13,14 +13,13 @@ function categoryFromPath(pagePath: string): string {
 }
 
 export class IndexManager {
-  constructor(private readonly indexPath: string) {}
+  constructor(
+    private readonly provider: StorageProvider,
+    private readonly pagePath: string = "wiki/index.md",
+  ) {}
 
   async read(): Promise<string> {
-    try {
-      return await readFile(this.indexPath, "utf-8");
-    } catch {
-      return "";
-    }
+    return (await this.provider.readPage(this.pagePath)) ?? "";
   }
 
   async addEntry(pagePath: string, summary: string): Promise<void> {
@@ -50,7 +49,7 @@ export class IndexManager {
       content = content + separator + "\n" + header + "\n" + entry + "\n";
     }
 
-    await writeFile(this.indexPath, content, "utf-8");
+    await this.provider.writePage(this.pagePath, content);
   }
 
   async removeEntry(pagePath: string): Promise<boolean> {
@@ -61,7 +60,7 @@ export class IndexManager {
 
     if (filtered.length === lines.length) return false;
 
-    await writeFile(this.indexPath, filtered.join("\n"), "utf-8");
+    await this.provider.writePage(this.pagePath, filtered.join("\n"));
     return true;
   }
 

@@ -1,5 +1,6 @@
 import { Command } from "commander";
 import * as git from "../lib/git.ts";
+import { requireFilesystem } from "../lib/storage.ts";
 import type { WikiContext } from "../types.ts";
 
 export function makeHistoryCommand(): Command {
@@ -13,6 +14,7 @@ export function makeHistoryCommand(): Command {
       options: { last: string },
     ) {
       const ctx: WikiContext = this.optsWithGlobals().wikiContext;
+      requireFilesystem(ctx, "history");
       const limit = parseInt(options.last, 10);
 
       let result;

@@ -1,6 +1,4 @@
 import { Command } from "commander";
-import { join } from "path";
-import { WikiManager } from "../lib/wiki.ts";
 import type { WikiContext } from "../types.ts";
 
 export function makeReadCommand(): Command {
@@ -9,8 +7,7 @@ export function makeReadCommand(): Command {
     .argument("<path>", "relative path to the page")
     .action(async function (this: Command, pagePath: string) {
       const ctx: WikiContext = this.optsWithGlobals().wikiContext;
-      const wiki = new WikiManager(ctx.root);
-      const content = await wiki.readPage(pagePath);
+      const content = await ctx.provider.readPage(pagePath);
       if (content === null) {
         console.error(`Page not found: ${pagePath}`);
         process.exit(1);

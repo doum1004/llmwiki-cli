@@ -1,5 +1,6 @@
 import { Command } from "commander";
 import * as git from "../lib/git.ts";
+import { requireFilesystem } from "../lib/storage.ts";
 import type { WikiContext } from "../types.ts";
 
 export function makePullCommand(): Command {
@@ -7,6 +8,7 @@ export function makePullCommand(): Command {
     .description("Pull wiki changes from remote")
     .action(async function (this: Command) {
       const ctx: WikiContext = this.optsWithGlobals().wikiContext;
+      requireFilesystem(ctx, "pull");
 
       if (!(await git.hasRemote(ctx.root))) {
         console.error('No remote configured. Use "wiki repo connect" to add one.');

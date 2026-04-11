@@ -1,5 +1,4 @@
 import { Command } from "commander";
-import { join } from "path";
 import { LogManager } from "../lib/log-manager.ts";
 import type { WikiContext } from "../types.ts";
 
@@ -16,7 +15,7 @@ export function makeLogCommand(): Command {
       options: { last?: string; type?: string },
     ) {
       const ctx: WikiContext = this.optsWithGlobals().wikiContext;
-      const mgr = new LogManager(join(ctx.root, "wiki/log.md"));
+      const mgr = new LogManager(ctx.provider);
       const entries = await mgr.show({
         last: options.last ? parseInt(options.last, 10) : undefined,
         type: options.type,
@@ -40,7 +39,7 @@ export function makeLogCommand(): Command {
     .argument("<message>", "log message")
     .action(async function (this: Command, type: string, message: string) {
       const ctx: WikiContext = this.optsWithGlobals().wikiContext;
-      const mgr = new LogManager(join(ctx.root, "wiki/log.md"));
+      const mgr = new LogManager(ctx.provider);
       await mgr.append(type, message);
       console.log(`Logged: ${type} | ${message}`);
     });

@@ -1,7 +1,7 @@
 import { Command } from "commander";
-import { WikiManager } from "../lib/wiki.ts";
 import { search } from "../lib/search.ts";
 import { loadRegistry } from "../lib/registry.ts";
+import { createProvider } from "../lib/storage.ts";
 import type { WikiContext } from "../types.ts";
 import type { SearchResult } from "../lib/search.ts";
 
@@ -23,7 +23,7 @@ export function makeSearchCommand(): Command {
       if (options.all) {
         const registry = await loadRegistry();
         for (const [id, entry] of Object.entries(registry.wikis)) {
-          const wiki = new WikiManager(entry.path);
+          const wiki = createProvider("filesystem", entry.path);
           const hits = await search(wiki, query, { limit });
           for (const hit of hits) {
             results.push({ ...hit, wiki: id });
@@ -33,8 +33,7 @@ export function makeSearchCommand(): Command {
         results = results.slice(0, limit);
       } else {
         const ctx: WikiContext = this.optsWithGlobals().wikiContext;
-        const wiki = new WikiManager(ctx.root);
-        results = await search(wiki, query, { limit });
+        results = await search(ctx.provider, query, { limit });
       }
 
       if (options.json) {

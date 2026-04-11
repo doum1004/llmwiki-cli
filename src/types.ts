@@ -1,7 +1,18 @@
+export type BackendType = "filesystem";
+
+export interface StorageProvider {
+  readPage(relativePath: string): Promise<string | null>;
+  writePage(relativePath: string, content: string): Promise<void>;
+  appendPage(relativePath: string, content: string): Promise<boolean>;
+  pageExists(relativePath: string): Promise<boolean>;
+  listPages(dir?: string): Promise<string[]>;
+}
+
 export interface WikiConfig {
   name: string;
   domain: string;
   created: string;
+  backend?: BackendType;
   paths: {
     raw: string;
     wiki: string;
@@ -22,10 +33,14 @@ export interface Registry {
   default: string | null;
 }
 
-export interface WikiContext {
+export interface ResolvedWiki {
   config: WikiConfig;
   root: string;
   id: string;
+}
+
+export interface WikiContext extends ResolvedWiki {
+  provider: StorageProvider;
 }
 
 export interface GlobalOptions {

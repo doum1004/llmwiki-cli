@@ -26,7 +26,8 @@ import { makePushCommand } from "../src/commands/push.ts";
 import { makePullCommand } from "../src/commands/pull.ts";
 import { makeSyncCommand } from "../src/commands/sync.ts";
 import { resolveWiki } from "../src/lib/resolver.ts";
-import type { GlobalOptions } from "../src/types.ts";
+import { createProvider } from "../src/lib/storage.ts";
+import type { GlobalOptions, WikiContext } from "../src/types.ts";
 
 const program = new Command();
 
@@ -70,22 +71,27 @@ const SKIP_RESOLUTION = new Set(["init", "registry", "use", "auth", "skill"]);
 program.hook("preAction", async (thisCommand, actionCommand) => {
   if (SKIP_RESOLUTION.has(actionCommand.name())) return;
 
-  let context;
+  let resolved;
   try {
     const globalOpts = thisCommand.optsWithGlobals<GlobalOptions>();
-    context = await resolveWiki(globalOpts);
+    resolved = await resolveWiki(globalOpts);
   } catch (err: any) {
     console.error(err.message);
     process.exit(1);
   }
 
-  if (!context) {
+  if (!resolved) {
     console.error(
       'No wiki found. Run "wiki init" to create one, or use --wiki to specify.',
     );
     process.exit(1);
   }
 
+  const backend = resolved.config.backend ?? "filesystem";
+  const context: WikiContext = {
+    ...resolved,
+    provider: createProvider(backend, resolved.root),
+  };
   actionCommand.setOptionValueWithSource("wikiContext", context, "cli");
 });
 

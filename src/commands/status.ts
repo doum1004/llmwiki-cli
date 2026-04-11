@@ -1,6 +1,4 @@
 import { Command } from "commander";
-import { join } from "path";
-import { WikiManager } from "../lib/wiki.ts";
 import { buildLinkGraph } from "../lib/link-parser.ts";
 import { LogManager } from "../lib/log-manager.ts";
 import * as git from "../lib/git.ts";
@@ -23,10 +21,9 @@ export function makeStatusCommand(): Command {
     .option("--json", "output as JSON")
     .action(async function (this: Command, options: { json?: boolean }) {
       const ctx: WikiContext = this.optsWithGlobals().wikiContext;
-      const wiki = new WikiManager(ctx.root);
 
       // Page counts
-      const pages = await wiki.listPages();
+      const pages = await ctx.provider.listPages();
       const byDir: Record<string, number> = {};
       for (const page of pages) {
         const dir = page.includes("/")
@@ -36,24 +33,28 @@ export function makeStatusCommand(): Command {
       }
 
       // Link graph
-      const graph = await buildLinkGraph(wiki);
+      const graph = await buildLinkGraph(ctx.provider);
       let totalLinks = 0;
       for (const [, data] of graph.pages) {
         totalLinks += data.outbound.length;
       }
 
       // Recent activity
-      const logMgr = new LogManager(join(ctx.root, "wiki/log.md"));
+      const logMgr = new LogManager(ctx.provider);
       const recentEntries = await logMgr.show({ last: 5 });
       const recentActivity = recentEntries.map((e) => {
         const match = e.match(/## (\[.*)/);
         return match ? match[1]! : e;
       });
 
-      // Git info
-      const gitLog = await git.log(ctx.root, 1);
-      const commitCount = gitLog.ok ? (await git.log(ctx.root, 99999)).output.split("\n").filter(Boolean).length.toString() : "0";
-      const remote = await git.hasRemote(ctx.root);
+      // Git info (filesystem backend only)
+      let gitInfo = { commits: "N/A", hasRemote: false };
+      if ((ctx.config.backend ?? "filesystem") === "filesystem") {
+        const gitLog = await git.log(ctx.root, 1);
+        const commitCount = gitLog.ok ? (await git.log(ctx.root, 99999)).output.split("\n").filter(Boolean).length.toString() : "0";
+        const remote = await git.hasRemote(ctx.root);
+        gitInfo = { commits: commitCount, hasRemote: remote };
+      }
 
       const info: StatusInfo = {
         name: ctx.config.name,
@@ -67,7 +68,7 @@ export function makeStatusCommand(): Command {
           orphans: graph.orphans.length,
         },
         recentActivity,
-        git: { commits: commitCount, hasRemote: remote },
+        git: gitInfo,
       };
 
       if (options.json) {

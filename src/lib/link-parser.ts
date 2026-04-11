@@ -1,4 +1,4 @@
-import type { WikiManager } from "./wiki.ts";
+import type { StorageProvider } from "../types.ts";
 
 const WIKILINK_REGEX = /\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/g;
 
@@ -21,7 +21,7 @@ export function extractWikilinks(content: string): string[] {
 }
 
 async function resolveLink(
-  wiki: WikiManager,
+  wiki: StorageProvider,
   target: string,
   allPages: string[],
 ): Promise<string | null> {
@@ -50,7 +50,7 @@ async function resolveLink(
   return null;
 }
 
-export async function buildLinkGraph(wiki: WikiManager): Promise<LinkGraph> {
+export async function buildLinkGraph(wiki: StorageProvider): Promise<LinkGraph> {
   const allPages = await wiki.listPages();
   const pages = new Map<string, { outbound: string[]; inbound: string[] }>();
   const brokenLinks: Array<{ source: string; target: string }> = [];

@@ -1,5 +1,4 @@
 import { Command } from "commander";
-import { WikiManager } from "../lib/wiki.ts";
 import type { WikiContext } from "../types.ts";
 
 export function makeListCommand(): Command {
@@ -14,8 +13,7 @@ export function makeListCommand(): Command {
       options: { tree?: boolean; json?: boolean },
     ) {
       const ctx: WikiContext = this.optsWithGlobals().wikiContext;
-      const wiki = new WikiManager(ctx.root);
-      const pages = await wiki.listPages(dir);
+      const pages = await ctx.provider.listPages(dir);
 
       if (options.json) {
         console.log(JSON.stringify(pages, null, 2));

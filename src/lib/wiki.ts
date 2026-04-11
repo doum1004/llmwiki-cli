@@ -1,7 +1,8 @@
 import { readFile, writeFile, mkdir, readdir, stat } from "fs/promises";
 import { join, relative, dirname } from "path";
+import type { StorageProvider } from "../types.ts";
 
-export class WikiManager {
+export class WikiManager implements StorageProvider {
   constructor(public readonly root: string) {}
 
   private resolve(relativePath: string): string {

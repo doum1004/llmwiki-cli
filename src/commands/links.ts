@@ -1,5 +1,4 @@
 import { Command } from "commander";
-import { WikiManager } from "../lib/wiki.ts";
 import { buildLinkGraph } from "../lib/link-parser.ts";
 import type { WikiContext } from "../types.ts";
 
@@ -9,8 +8,7 @@ export function makeLinksCommand(): Command {
     .argument("<path>", "page path")
     .action(async function (this: Command, pagePath: string) {
       const ctx: WikiContext = this.optsWithGlobals().wikiContext;
-      const wiki = new WikiManager(ctx.root);
-      const graph = await buildLinkGraph(wiki);
+      const graph = await buildLinkGraph(ctx.provider);
 
       const pageData = graph.pages.get(pagePath);
       if (!pageData) {

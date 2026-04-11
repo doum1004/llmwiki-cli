@@ -27,7 +27,8 @@
       "Bash(wc -l /c/Workspace/Personal/llm-wiki/src/lib/*.ts /c/Workspace/Personal/llm-wiki/src/commands/*.ts)",
       "Bash(head -5 /c/Workspace/Personal/llm-wiki/src/commands/*.ts)",
       "Bash(head -10 /c/Workspace/Personal/llm-wiki/src/lib/*.ts)",
-      "Bash(npm test:*)"
+      "Bash(npm test:*)",
+      "Bash(npx tsc:*)"
     ]
   }
 }

@@ -1,4 +1,4 @@
-import type { WikiManager } from "./wiki.ts";
+import type { StorageProvider } from "../types.ts";
 
 export interface SearchResult {
   path: string;
@@ -7,7 +7,7 @@ export interface SearchResult {
 }
 
 export async function search(
-  wiki: WikiManager,
+  wiki: StorageProvider,
   query: string,
   options?: { limit?: number; dir?: string },
 ): Promise<SearchResult[]> {

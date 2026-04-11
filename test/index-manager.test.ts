@@ -3,9 +3,11 @@ import { mkdtemp, rm, writeFile } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
 import { IndexManager } from "../src/lib/index-manager.ts";
+import { WikiManager } from "../src/lib/wiki.ts";
 
 let testDir: string;
 let indexPath: string;
+let wiki: WikiManager;
 let mgr: IndexManager;
 
 const INITIAL_INDEX = `# Index
@@ -23,7 +25,8 @@ beforeEach(async () => {
   testDir = await mkdtemp(join(tmpdir(), "llmwiki-idx-"));
   indexPath = join(testDir, "index.md");
   await writeFile(indexPath, INITIAL_INDEX, "utf-8");
-  mgr = new IndexManager(indexPath);
+  wiki = new WikiManager(testDir);
+  mgr = new IndexManager(wiki, "index.md");
 });
 
 afterEach(async () => {
@@ -101,7 +104,7 @@ describe("IndexManager", () => {
   it("creates section if it does not exist", async () => {
     // Start with an empty file
     await writeFile(indexPath, "# Index\n", "utf-8");
-    mgr = new IndexManager(indexPath);
+    mgr = new IndexManager(wiki, "index.md");
     await mgr.addEntry("sources/new.md", "New source");
     const content = await mgr.read();
     expect(content).toContain("## Sources");
@@ -125,7 +128,7 @@ describe("IndexManager", () => {
   });
 
   it("read returns empty string for missing file", async () => {
-    const missingMgr = new IndexManager(join(testDir, "nonexistent.md"));
+    const missingMgr = new IndexManager(wiki, "nonexistent.md");
     const content = await missingMgr.read();
     expect(content).toBe("");
   });
