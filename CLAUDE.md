@@ -14,6 +14,10 @@ A CLI tool that helps LLM agents (Claude Code, Codex, etc.) build and maintain p
 - **Build**: `bun build` bundles to `dist/wiki.js` targeting Node.js
 - **Tests**: Bun test runner (`bun test`)
 
+## LLM Agent Skill Guide
+
+See [`docs/SKILL.md`](docs/SKILL.md) for a self-contained reference on how LLM agents should operate this CLI (workflows, command patterns, gotchas).
+
 ## Project Structure
 
 ```

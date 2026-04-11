@@ -144,6 +144,10 @@ wiki pull                                           # Git pull
 wiki sync                                           # Pull + push
 ```
 
+## LLM Agent Skill Guide
+
+For a complete, self-contained reference designed for LLM agents, see [`docs/SKILL.md`](docs/SKILL.md). It covers workflows, command patterns, page format, and common gotchas.
+
 ## How LLM Agents Use This
 
 The generated `SCHEMA.md` in each wiki contains complete instructions. Here are the typical workflows:
