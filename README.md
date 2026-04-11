@@ -19,22 +19,21 @@ The CLI is the hands -- it reads, writes, searches, and manages wiki files. The 
 LLM Agent (Claude Code / Codex)
 |
 | shells out to:
-|   $ wiki init my-wiki --domain "machine learning"
+|   $ wiki init my-wiki --backend git --domain "machine learning"
 |   $ wiki write wiki/concepts/attention.md <<'EOF' ... EOF
 |   $ wiki index add "concepts/attention.md" "Overview of attention"
 |   $ wiki search "scaling laws"
 |   $ wiki lint
-|   $ wiki commit "ingest: attention paper"
 |   $ wiki push
 |
 v
-wiki CLI (pure filesystem + git)
+wiki CLI (StorageProvider abstraction)
 |
 v
-Wiki Repo (markdown files + .git + GitHub)
+filesystem | git (auto-commit) | supabase (database)
 ```
 
-**Key principle**: The CLI never calls any LLM API. It is a pure filesystem + git tool.
+**Key principle**: The CLI never calls any LLM API. It is a pure storage tool with pluggable backends.
 
 ## Install
 
@@ -44,11 +43,22 @@ npm install -g llmwiki-cli
 
 This gives you two commands: `wiki` (primary, 4 chars) and `llmwiki` (fallback if `wiki` conflicts).
 
+## Storage Backends
+
+| Backend | Description | Init |
+|---------|-------------|------|
+| `filesystem` (default) | Plain markdown files on disk | `wiki init my-wiki` |
+| `git` | Filesystem + auto-commit on every write + git commands | `wiki init my-wiki --backend git` |
+| `supabase` | Pages in a Supabase database table | `wiki init my-wiki --backend supabase --supabase-url <url> --supabase-key <key>` |
+
 ## Quick Start
 
 ```bash
-# Create a new wiki
+# Create a new wiki (filesystem backend, default)
 wiki init my-wiki --name "My Notes" --domain "research"
+
+# Or with git versioning
+wiki init my-wiki --name "My Notes" --domain "research" --backend git
 
 # Write a page
 wiki write wiki/concepts/attention.md <<'EOF'
@@ -65,20 +75,19 @@ EOF
 wiki index add "concepts/attention.md" "Overview of attention mechanisms"
 wiki log append ingest "Attention mechanism page"
 
-# Search, lint, commit
+# Search and lint
 wiki search "attention"
 wiki lint
-wiki commit "ingest: attention mechanism"
 ```
 
 ## Wiki Structure
 
-When you run `wiki init`, it creates:
+When you run `wiki init` (filesystem or git backend), it creates:
 
 ```
 my-wiki/
-├── .git/
-├── .llmwiki.yaml          # Wiki config
+├── .git/                  # Only with --backend git
+├── .llmwiki.yaml          # Wiki config (all backends)
 ├── SCHEMA.md              # Instructions for LLM agents
 ├── raw/                   # Immutable source documents
 │   └── assets/            # Downloaded images
@@ -91,11 +100,14 @@ my-wiki/
     └── synthesis/         # Cross-cutting analysis
 ```
 
+For supabase backend, only `.llmwiki.yaml` is created locally. Pages are stored in the `wiki_pages` database table.
+
 ## Commands
 
 ### Wiki Management
 ```bash
-wiki init [dir] --name <name> --domain <domain>   # Create new wiki
+wiki init [dir] --name <name> --domain <domain> --backend <type>  # Create new wiki
+wiki init [dir] --backend supabase --supabase-url <url> --supabase-key <key>
 wiki registry                                       # List all wikis
 wiki use [wiki-id]                                  # Set active wiki
 ```
@@ -116,6 +128,10 @@ wiki index add <path> <summary>                     # Add entry to index
 wiki index remove <path>                            # Remove entry
 wiki log show [--last N] [--type T]                 # Print log entries
 wiki log append <type> <message>                    # Append log entry
+```
+
+### Git Operations (git backend only)
+```bash
 wiki commit [message]                               # Git add + commit
 wiki history [path] [--last N]                      # Git log
 wiki diff [ref]                                     # Git diff
@@ -130,7 +146,7 @@ wiki orphans                                        # Pages with no inbound link
 wiki status [--json]                                # Wiki overview stats
 ```
 
-### GitHub Sync
+### GitHub Sync (git backend only)
 ```bash
 wiki auth login                                     # Authenticate with GitHub PAT
 wiki auth status                                    # Show auth status
@@ -174,7 +190,6 @@ EOF
 # Update bookkeeping
 wiki index add "sources/attention-paper.md" "Attention Is All You Need (2017)"
 wiki log append ingest "Attention paper"
-wiki commit "ingest: attention paper"
 ```
 
 ### Answer a Question
@@ -190,7 +205,6 @@ wiki log append query "How does multi-head attention work?"
 wiki lint                  # find broken links, orphans, missing frontmatter
 wiki orphans               # pages nobody links to
 wiki status                # overview stats
-wiki commit "maintenance: fix lint issues"
 ```
 
 ### Sync to GitHub
@@ -219,7 +233,8 @@ wiki search "neural networks" --all       # search across all wikis
 ## Requirements
 
 - Node.js >= 18 (or Bun)
-- Git (optional but recommended for version control)
+- Git (for `--backend git` only)
+- `@supabase/supabase-js` (for `--backend supabase` only — optional dependency)
 
 ## Development
 
@@ -227,7 +242,7 @@ wiki search "neural networks" --all       # search across all wikis
 git clone https://github.com/doum1004/llmwiki-cli
 cd llmwiki-cli
 bun install
-bun test            # 192 tests
+bun test            # 210 tests
 bun run build       # bundle to dist/wiki.js
 bun run dev -- --help
 ```

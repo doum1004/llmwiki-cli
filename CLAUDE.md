@@ -4,13 +4,13 @@
 
 A CLI tool that helps LLM agents (Claude Code, Codex, etc.) build and maintain personal knowledge bases. The CLI is the hands — it reads, writes, searches, and manages wiki files. The LLM is the brain — it decides what to create, update, and connect.
 
-**Key principle: The CLI never calls any LLM API. It is a pure filesystem + git tool.**
+**Key principle: The CLI never calls any LLM API. It is a pure storage tool with pluggable backends (filesystem, git, supabase).**
 
 ## Tech Stack
 
 - **Runtime**: Bun (development), Node.js (published bundle)
 - **Language**: TypeScript
-- **Dependencies**: commander (CLI), js-yaml (YAML parsing)
+- **Dependencies**: commander (CLI), js-yaml (YAML parsing), @supabase/supabase-js (optional)
 - **Build**: `bun build` bundles to `dist/wiki.js` targeting Node.js
 - **Tests**: Bun test runner (`bun test`)
 
@@ -26,6 +26,10 @@ dist/wiki.js             # Built bundle (npm-published artifact)
 src/
   types.ts               # Shared TypeScript interfaces
   lib/
+    storage.ts           # StorageProvider factory (createProvider) + requireGit guard
+    wiki.ts              # WikiManager: filesystem StorageProvider
+    git-provider.ts      # GitProvider: filesystem + auto-commit on write/append
+    supabase-provider.ts # SupabaseProvider: Supabase database StorageProvider
     config.ts            # .llmwiki.yaml read/write
     registry.ts          # Global registry (~/.config/llmwiki/registry.yaml)
     resolver.ts          # Wiki resolution chain (--wiki → cwd → walk up → default)
@@ -33,10 +37,9 @@ src/
     templates.ts         # Default file content (SCHEMA.md, index.md, log.md)
     picker.ts            # Interactive wiki selection (prompt())
     prompt.ts            # User input prompting (readline wrapper)
-    wiki.ts              # WikiManager: read/write/append/list pages
     search.ts            # Full-text search with term-frequency ranking
-    index-manager.ts     # IndexManager: add/remove/has entries in index.md
-    log-manager.ts       # LogManager: append/show activity log entries
+    index-manager.ts     # IndexManager: uses StorageProvider for index.md
+    log-manager.ts       # LogManager: uses StorageProvider for log.md
     frontmatter.ts       # YAML frontmatter parse/detect/add
     link-parser.ts       # Wikilink extraction and link graph building
     auth.ts              # GitHub auth (PAT token) persistence
@@ -70,6 +73,7 @@ test/
   init.test.ts           # Config, registry, resolver, templates, init integration
   git.test.ts            # Git operations (commit, log, diff, remote, branch)
   read-write.test.ts     # WikiManager page operations
+  storage.test.ts        # StorageProvider factory, filesystem + git provider contracts
   search.test.ts         # Full-text search
   index-manager.test.ts  # Index entry management
   log-manager.test.ts    # Activity log management
@@ -90,7 +94,8 @@ docs/
 
 ### Wiki Management
 ```
-wiki init [dir] --name --domain     # Create new wiki
+wiki init [dir] --name --domain --backend <filesystem|git|supabase>
+wiki init [dir] --backend supabase --supabase-url <url> --supabase-key <key>
 wiki registry                       # List all wikis
 wiki use [wiki-id]                  # Set active wiki
 ```
@@ -111,6 +116,10 @@ wiki index add <path> <summary>     # Add entry to index
 wiki index remove <path>            # Remove entry
 wiki log show [--last N] [--type T] # Print log entries
 wiki log append <type> <message>    # Append log entry
+```
+
+### Git Operations (git backend only)
+```
 wiki commit [message]               # Git add + commit (auto-message from last log entry)
 wiki history [path] [--last N]      # Git log
 wiki diff [ref]                     # Git diff
@@ -125,7 +134,7 @@ wiki orphans                        # Pages with no inbound links
 wiki status [--json]                # Wiki overview stats
 ```
 
-### GitHub Sync
+### GitHub Sync (git backend only)
 ```
 wiki auth login                     # Authenticate with GitHub PAT
 wiki auth status                    # Show auth status
@@ -141,9 +150,16 @@ wiki sync                           # Pull + push
 
 ## Architecture
 
+- **StorageProvider pattern**: All page I/O goes through the `StorageProvider` interface (5 methods: readPage, writePage, appendPage, pageExists, listPages). Three implementations:
+  - `WikiManager` — filesystem (default)
+  - `GitProvider` — wraps WikiManager, auto-commits on write/append
+  - `SupabaseProvider` — pages in Supabase `wiki_pages` table (dynamic import, optional dependency)
+- **Provider factory**: `createProvider(config, root)` in `src/lib/storage.ts`. Async (for dynamic Supabase import). Called once in preAction hook, injected as `ctx.provider`.
 - **Commander pattern**: Each command is a factory function (`makeXxxCommand()`) returning a `Command` instance, registered via `program.addCommand()`.
-- **preAction hook**: Resolves which wiki to target before command execution. Commands in `SKIP_RESOLUTION` set (init, registry, use, auth) bypass this.
+- **preAction hook**: Resolves which wiki to target, creates the StorageProvider, attaches both to `WikiContext`. Commands in `SKIP_RESOLUTION` set (init, registry, use, auth, skill) bypass this.
 - **Wiki resolution order**: `--wiki` flag → cwd `.llmwiki.yaml` → walk up directories → registry default.
+- **Backend gating**: Git commands (commit, push, pull, sync, history, diff) check `requireGit(ctx)` and exit with error for non-git backends.
+- **IndexManager/LogManager**: Accept `StorageProvider` in constructor (not filesystem paths). Backend-agnostic.
 - **Registry**: Global at `~/.config/llmwiki/registry.yaml`, overridable via `LLMWIKI_CONFIG_DIR` env var (used in tests).
 - **Git**: All operations use `child_process.execFile`, return `{ ok: boolean, output: string }`.
 - **GitHub API**: Uses `fetch` with Bearer token auth. Pagination, error handling for 401/403/422.
@@ -154,7 +170,7 @@ wiki sync                           # Pull + push
 ```bash
 bun install              # Install deps
 bun run dev              # Run CLI via source
-bun test                 # Run tests (192 tests across 11 files)
+bun test                 # Run tests (210 tests across 12 files)
 bun run build            # Bundle to dist/wiki.js
 bun run typecheck        # TypeScript check
 ```
@@ -177,6 +193,7 @@ See `docs/phase-{1-5}.md` for detailed tracking. All phases complete:
 - Phase 3: **COMPLETE** — index, log, commit, history, diff
 - Phase 4: **COMPLETE** — lint, links, backlinks, orphans, status
 - Phase 5: **COMPLETE** — auth, repo, push, pull, sync
+- Phase 6: **COMPLETE** — StorageProvider abstraction (filesystem, git, supabase backends)
 
 ## Conventions
 

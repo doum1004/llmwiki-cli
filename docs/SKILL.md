@@ -1,6 +1,20 @@
 # llmwiki-cli — LLM Agent Skill Guide
 
-You are operating a wiki CLI that manages markdown knowledge bases. You are the brain (deciding what to create, connect, and update). The CLI is the hands (reading, writing, searching, and syncing files). The CLI never calls any LLM API — it is a pure filesystem + git tool.
+You are operating a wiki CLI that manages markdown knowledge bases. You are the brain (deciding what to create, connect, and update). The CLI is the hands (reading, writing, searching, and syncing files). The CLI never calls any LLM API — it is a pure storage tool.
+
+## Storage Backends
+
+The CLI supports three storage backends:
+
+| Backend | Description | Init |
+|---------|-------------|------|
+| `filesystem` (default) | Plain markdown files on disk, no versioning | `wiki init my-wiki` |
+| `git` | Filesystem + auto-commit on every write/append + git commands | `wiki init my-wiki --backend git` |
+| `supabase` | Pages stored in a Supabase database table | `wiki init my-wiki --backend supabase --supabase-url <url> --supabase-key <key>` |
+
+- **filesystem**: Simplest. Pages are `.md` files. No versioning.
+- **git**: Every `wiki write` and `wiki append` auto-commits. Git commands (`commit`, `push`, `pull`, `sync`, `history`, `diff`) only work with this backend.
+- **supabase**: Pages stored in `wiki_pages` table. No local files. Requires `@supabase/supabase-js` installed.
 
 ## Critical Patterns
 
@@ -57,7 +71,7 @@ Page content here. Use [[wikilinks]] to connect pages.
 - Use kebab-case: `my-topic-name.md`
 - One topic per file — split large topics into sub-pages
 
-### Directory structure
+### Directory structure (filesystem/git backends)
 
 ```
 raw/                  # Immutable source documents (paste originals here)
@@ -70,6 +84,8 @@ wiki/                 # LLM-generated pages (all knowledge lives here)
   sources/            # One summary per ingested source
   synthesis/          # Cross-cutting analysis
 ```
+
+For supabase backend, the same paths are used as keys in the database — no local directory structure is created.
 
 ## Workflows
 
@@ -108,7 +124,7 @@ wiki index add "sources/attention-paper.md" "Attention Is All You Need (2017)"
 wiki index add "concepts/transformers.md" "Transformer architecture overview"
 wiki log append ingest "Attention paper and transformer concepts"
 
-# 5. Commit
+# 5. Commit (git backend only — auto-committed on write for git backend)
 wiki commit "ingest: attention paper"
 ```
 
@@ -140,9 +156,8 @@ wiki orphans                         # pages nobody links to
 wiki status                          # overview stats
 
 # 3. Fix issues: add frontmatter, create missing pages, connect orphans
-# 4. Commit fixes
+# 4. Log fixes (git backend auto-commits on write)
 wiki log append maintenance "Fixed broken links and orphan pages"
-wiki commit "maintenance: fix lint issues"
 ```
 
 ### Sync to GitHub
@@ -174,7 +189,8 @@ wiki search "neural networks" --all  # search across all wikis
 
 | Command | Description |
 |---------|-------------|
-| `wiki init [dir] --name <n> --domain <d>` | Create new wiki with directory structure |
+| `wiki init [dir] --name <n> --domain <d> --backend <type>` | Create new wiki (backends: filesystem, git, supabase) |
+| `wiki init [dir] --backend supabase --supabase-url <url> --supabase-key <key>` | Create Supabase-backed wiki |
 | `wiki registry` | List all registered wikis |
 | `wiki use [wiki-id]` | Set active wiki (interactive picker if no id) |
 
@@ -198,13 +214,15 @@ wiki search "neural networks" --all  # search across all wikis
 | `wiki log show [--last N] [--type T]` | Print log entries (filter by count/type) |
 | `wiki log append <type> <message>` | Append log entry (types: ingest, query, maintenance, etc.) |
 
-### Git Operations
+### Git Operations (git backend only)
 
 | Command | Description |
 |---------|-------------|
 | `wiki commit [message]` | Git add + commit (auto-message from last log entry if omitted) |
 | `wiki history [path] [--last N]` | Git log (optionally for a specific page) |
 | `wiki diff [ref]` | Git diff (optionally against a ref) |
+
+> Note: With git backend, `wiki write` and `wiki append` auto-commit. Manual `wiki commit` is for custom commit messages or changes made outside the CLI.
 
 ### Health & Links
 
@@ -216,7 +234,7 @@ wiki search "neural networks" --all  # search across all wikis
 | `wiki orphans` | List pages with no inbound links |
 | `wiki status [--json]` | Wiki overview: page counts, link stats, recent activity, git info |
 
-### GitHub Sync
+### GitHub Sync (git backend only)
 
 | Command | Description |
 |---------|-------------|
@@ -237,7 +255,7 @@ wiki search "neural networks" --all  # search across all wikis
 
 2. **Always update index + log** — after creating or modifying pages, call `wiki index add` and `wiki log append`. The `wiki lint` command checks for pages missing from the index.
 
-3. **Commit after meaningful changes** — `wiki commit` without a message auto-generates one from the last log entry. Add a log entry first for good commit messages.
+3. **Git commands require git backend** — `commit`, `push`, `pull`, `sync`, `history`, `diff` only work when `backend: git`. With git backend, writes auto-commit.
 
 4. **append fails if page doesn't exist** — use `wiki write` to create new pages, `wiki append` only for existing ones.
 
