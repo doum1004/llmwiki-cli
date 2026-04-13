@@ -11,6 +11,8 @@ A CLI tool for LLM agents to build and maintain personal knowledge bases.
 
 Inspired by [Andrej Karpathy's LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f).
 
+**[Live Demo](https://doum1004.github.io/llmwiki-cli/)** — interactive d3-force graph built from the example wiki in [`test-wiki-page/`](test-wiki-page/).
+
 ## Overview
 
 The CLI is the hands -- it reads, writes, searches, and manages wiki files. The LLM is the brain -- it decides what to create, update, and connect.

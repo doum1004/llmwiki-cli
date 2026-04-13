@@ -1,0 +1,53 @@
+name: Build Demo Visualization
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'test-wiki-page/**'
+      - 'src/lib/templates.ts'
+      - 'scripts/generate-viz-scripts.ts'
+      - '.github/workflows/demo-viz.yml'
+
+permissions:
+  pages: write
+  id-token: write
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Generate viz scripts from templates
+        run: bun run scripts/generate-viz-scripts.ts .viz-tmp
+      - name: Build graph data
+        env:
+          WIKI_DIR: test-wiki-page/wiki
+        run: node .viz-tmp/build-graph.cjs
+      - name: Build site
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: node .viz-tmp/build-site.cjs
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -78,6 +78,15 @@ docs/
   phase-3.md
   phase-4.md
   phase-5.md
+scripts/
+  generate-viz-scripts.ts # Extracts viz build scripts from templates.ts (used by demo workflow)
+test-wiki-page/
+  wiki/                  # Example wiki pages for live demo on GitHub Pages
+    index.md
+    log.md
+    concepts/
+    sources/
+    synthesis/
 ```
 
 ## Commands

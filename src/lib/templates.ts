@@ -246,7 +246,7 @@ export function getBuildGraphScript(): string {
 const path = require("path");
 
 const WIKILINK_RE = /\\[\\[([^\\]|]+)(?:\\|[^\\]]+)?\\]\\]/g;
-const WIKI_DIR = "wiki";
+const WIKI_DIR = process.env.WIKI_DIR || "wiki";
 const OUT_DIR = "dist";
 
 function findMdFiles(dir) {
@@ -275,18 +275,20 @@ function stripFrontmatter(content) {
   return content.trim();
 }
 
+const wikiPrefix = WIKI_DIR.replace(/\\\\/g, "/").replace(/\\/$/, "") + "/";
+
 function resolveLink(target, allFiles) {
   const withMd = target.endsWith(".md") ? target : target + ".md";
   const candidates = allFiles.map((f) => f.replace(/\\\\/g, "/"));
 
   if (candidates.includes(withMd)) return withMd;
 
-  const withWiki = "wiki/" + withMd;
+  const withWiki = wikiPrefix + withMd;
   if (candidates.includes(withWiki)) return withWiki;
 
-  const dirs = ["wiki/entities", "wiki/concepts", "wiki/sources", "wiki/synthesis"];
-  for (const dir of dirs) {
-    const candidate = dir + "/" + withMd;
+  const subdirs = ["entities", "concepts", "sources", "synthesis"];
+  for (const sub of subdirs) {
+    const candidate = wikiPrefix + sub + "/" + withMd;
     if (candidates.includes(candidate)) return candidate;
   }
 
@@ -297,6 +299,13 @@ function resolveLink(target, allFiles) {
   return null;
 }
 
+function relDir(filePath) {
+  const rel = filePath.replace(/\\\\/g, "/");
+  const inner = rel.startsWith(wikiPrefix) ? rel.slice(wikiPrefix.length) : rel;
+  const first = inner.split("/")[0];
+  return inner.includes("/") ? first : "wiki";
+}
+
 const files = findMdFiles(WIKI_DIR);
 const nodes = [];
 const edges = [];
@@ -304,7 +313,7 @@ const edges = [];
 for (const file of files) {
   const content = fs.readFileSync(file, "utf-8");
   const relPath = file.replace(/\\\\/g, "/");
-  const dir = relPath.split("/")[1] || "wiki";
+  const dir = relDir(relPath);
   nodes.push({ id: relPath, title: extractTitle(content, file), dir, body: stripFrontmatter(content) });
 
   let match;
