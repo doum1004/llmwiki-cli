@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
-import { mkdtemp, rm, readdir, stat } from "fs/promises";
+import { mkdtemp, rm, readdir, stat, writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
 import * as yaml from "js-yaml";
@@ -9,6 +9,8 @@ import {
   addToRegistry,
   removeFromRegistry,
   setDefault,
+  setStorageProfile,
+  getStorageProfile,
 } from "../src/lib/registry.ts";
 import { resolveWiki } from "../src/lib/resolver.ts";
 import {
@@ -186,6 +188,71 @@ describe("registry", () => {
   it("setDefault returns false for unknown id", async () => {
     const result = await setDefault("nonexistent");
     expect(result).toBe(false);
+  });
+
+  it("setStorageProfile saves slug and getStorageProfile reads it", async () => {
+    const entry: RegistryEntry = {
+      path: "/tmp/wiki1",
+      name: "wiki1",
+      domain: "general",
+      created: "2026-01-01T00:00:00.000Z",
+    };
+    await addToRegistry("wiki1", entry);
+    await setStorageProfile("wiki1", "dad");
+    const registry = await loadRegistry();
+    expect(getStorageProfile(registry, "wiki1")).toBe("dad");
+    expect(registry.storageProfiles?.wiki1).toBe("dad");
+  });
+
+  it("setStorageProfile returns false for unknown wiki id", async () => {
+    const ok = await setStorageProfile("missing", "dad");
+    expect(ok).toBe(false);
+  });
+
+  it("removeFromRegistry removes storageProfiles entry", async () => {
+    const entry: RegistryEntry = {
+      path: "/tmp/wiki1",
+      name: "wiki1",
+      domain: "general",
+      created: "2026-01-01T00:00:00.000Z",
+    };
+    await addToRegistry("wiki1", entry);
+    await setStorageProfile("wiki1", "mom");
+    await removeFromRegistry("wiki1");
+    const registry = await loadRegistry();
+    expect(getStorageProfile(registry, "wiki1")).toBeUndefined();
+  });
+
+  it("setStorageProfile with null clears saved profile", async () => {
+    const entry: RegistryEntry = {
+      path: "/tmp/wiki1",
+      name: "wiki1",
+      domain: "general",
+      created: "2026-01-01T00:00:00.000Z",
+    };
+    await addToRegistry("wiki1", entry);
+    await setStorageProfile("wiki1", "dad");
+    await setStorageProfile("wiki1", null);
+    const registry = await loadRegistry();
+    expect(getStorageProfile(registry, "wiki1")).toBeUndefined();
+    expect(registry.storageProfiles).toBeUndefined();
+  });
+
+  it("loadRegistry merges legacy supabaseProfiles into storageProfiles", async () => {
+    const regPath = join(configDir, "registry.yaml");
+    await mkdir(configDir, { recursive: true });
+    await writeFile(
+      regPath,
+      `wikis: {}
+default: null
+supabaseProfiles:
+  wiki1: legacy-user
+`,
+      "utf-8",
+    );
+    const registry = await loadRegistry();
+    expect(getStorageProfile(registry, "wiki1")).toBe("legacy-user");
+    expect(registry.storageProfiles?.wiki1).toBe("legacy-user");
   });
 });
 

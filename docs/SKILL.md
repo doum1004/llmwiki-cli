@@ -14,7 +14,8 @@ The CLI supports three storage backends:
 
 - **filesystem**: Simplest. Pages are `.md` files. No versioning.
 - **git**: Every `wiki write` and `wiki append` auto-commits and auto-pushes. Provide `--git-token` at init to enable GitHub sync. Omit for local-only git.
-- **supabase**: Pages stored in `wiki_pages` table. No local files. Requires `@supabase/supabase-js` installed.
+- **supabase**: Pages live in `wiki_pages` (no local files). Requires `@supabase/supabase-js`. **`wiki init --backend supabase`** probes the table; if it is missing or wrong, it prints **full DDL** (PostgreSQL **15+**: nullable `user_id`, `unique nulls not distinct (user_id, wiki_id, path)`, trigger, RLS). `user_id` **NULL** = shared partition (typical with **service role**); non-null rows are per-user. RLS for `authenticated`: `user_id is null or auth.uid() = user_id`. Prefer **anon** key + `LLMWIKI_SUPABASE_ACCESS_TOKEN` (user JWT) when you want RLS; service role bypasses RLS.
+- **Profiles (filesystem, git, supabase):** `wiki profile use <slug>`, `--profile`, `LLMWIKI_PROFILE`, or `profile` in `.llmwiki.yaml` choose a namespace. Local backends store files under `profiles/<slug>/` in the wiki directory; Supabase uses composite `wiki_id`. Not a security boundary on shared disks or shared API keys.
 
 ## Critical Patterns
 
@@ -184,7 +185,7 @@ wiki search "neural networks" --all  # search across all wikis
 | `wiki init [dir] --backend git --git-token <pat> [--git-repo owner/repo]` | Create git-backed wiki with GitHub sync + visualization |
 | `wiki init [dir] --backend git --no-viz` | Create git-backed wiki without visualization |
 | `wiki init [existing-dir] --viz` | Add visualization to existing git wiki |
-| `wiki init [dir] --backend supabase --supabase-url <url> --supabase-key <key>` | Create Supabase-backed wiki |
+| `wiki init [dir] --backend supabase --supabase-url <url> --supabase-key <key>` | Create Supabase-backed wiki; prints DDL if `wiki_pages` is missing or incompatible |
 | `wiki registry` | List all registered wikis |
 | `wiki use [wiki-id]` | List wikis or set active wiki |
 

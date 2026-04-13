@@ -5,8 +5,9 @@ export function getDefaultConfig(
   domain: string,
   backend: BackendType = "filesystem",
   options?: {
+    profile?: string;
     git?: { token: string; repo: string };
-    supabase?: { url: string; key: string };
+    supabase?: { url: string; key: string; profile?: string; access_token?: string };
   },
 ): WikiConfig {
   const config: WikiConfig = {
@@ -20,6 +21,9 @@ export function getDefaultConfig(
       schema: "SCHEMA.md",
     },
   };
+  if (options?.profile !== undefined) {
+    config.profile = options.profile;
+  }
   if (options?.git) {
     config.git = options.git;
   }

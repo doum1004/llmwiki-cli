@@ -342,6 +342,41 @@ describe("orphans command", () => {
   });
 });
 
+describe("profile command", () => {
+  it("profile show for filesystem wiki prints effective root", async () => {
+    await initWiki();
+    const result = await runWiki(["-w", "testwiki", "profile", "show"]);
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("Registry wiki id: testwiki");
+    expect(result.stdout).toContain("Effective storage root:");
+    expect(result.stdout).toContain("Source: default");
+  });
+
+  it("profile use saves slug and profile show updates effective root", async () => {
+    await initWiki();
+    const use = await runWiki(["-w", "testwiki", "profile", "use", "dad"]);
+    expect(use.exitCode).toBe(0);
+    const show = await runWiki(["-w", "testwiki", "profile", "show"]);
+    expect(show.exitCode).toBe(0);
+    expect(show.stdout).toContain("profiles");
+    expect(show.stdout).toContain("dad");
+    expect(show.stdout).toContain("Saved profile in registry: dad");
+  });
+
+  it("profile clear removes registry slug", async () => {
+    await initWiki();
+    const use = await runWiki(["-w", "testwiki", "profile", "use", "son"]);
+    expect(use.exitCode).toBe(0);
+    const clear = await runWiki(["-w", "testwiki", "profile", "clear"]);
+    expect(clear.exitCode).toBe(0);
+    const show = await runWiki(["-w", "testwiki", "profile", "show"]);
+    expect(show.exitCode).toBe(0);
+    expect(show.stdout).not.toContain("Saved profile in registry:");
+    expect(show.stdout).toContain("Source: default");
+    expect(show.stdout).not.toMatch(/profiles[^\n]*son/);
+  });
+});
+
 // --- error cases ---
 
 describe("error handling", () => {

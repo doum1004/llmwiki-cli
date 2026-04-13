@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
-import { mkdtemp, rm } from "fs/promises";
+import { mkdtemp, rm, readFile } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
 import { execFile } from "child_process";
@@ -62,5 +62,16 @@ describe("GitProvider", () => {
     const pages = await gitProvider.listPages();
     expect(pages).toContain("a.md");
     expect(pages).toContain("sub/b.md");
+  });
+
+  it("uses wikiDataRoot under profiles when scoped", async () => {
+    const dataRoot = join(gitDir, "profiles", "bob");
+    const scoped = new GitProvider(gitDir, undefined, dataRoot);
+    await scoped.writePage("scoped.md", "in-profile");
+    const disk = await readFile(join(dataRoot, "scoped.md"), "utf-8");
+    expect(disk).toBe("in-profile");
+    const log = await git.log(gitDir, 1);
+    expect(log.ok).toBe(true);
+    expect(log.output).toContain("update scoped.md");
   });
 });

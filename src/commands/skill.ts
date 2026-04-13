@@ -184,9 +184,11 @@ wiki search "neural networks" --all  # search across all wikis
 |---------|-------------|
 | \`wiki init [dir] --name <n> --domain <d>\` | Create new wiki with directory structure |
 | \`wiki init [dir] --backend git [--no-viz]\` | Create git-backed wiki (--viz default, adds GitHub Pages graph) |
+| \`wiki init [dir] --backend supabase --supabase-url <url> --supabase-key <key>\` | Supabase-backed wiki; init probes \`wiki_pages\` and prints DDL if missing/wrong (PG 15+). Nullable \`user_id\` + RLS; anon key + user JWT for RLS; service role for shared null rows |
 | \`wiki init [existing-dir] --viz\` | Add visualization to existing git wiki |
 | \`wiki registry\` | List all registered wikis |
 | \`wiki use [wiki-id]\` | Set active wiki (interactive picker if no id) |
+| \`wiki profile show | use <slug> | clear\` | Storage profile: local wikis use \`profiles/<slug>/\`; Supabase uses composite \`wiki_id\`; \`--profile\` / \`LLMWIKI_PROFILE\` override |
 
 ### Reading & Writing
 

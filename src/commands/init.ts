@@ -4,6 +4,7 @@ import { mkdir, writeFile, stat } from "fs/promises";
 import { loadConfig, saveConfig } from "../lib/config.ts";
 import { addToRegistry } from "../lib/registry.ts";
 import { createProvider } from "../lib/storage.ts";
+import { probeWikiPagesTable } from "../lib/supabase-wiki-pages-probe.ts";
 import * as git from "../lib/git.ts";
 import { createRepo, getUsername, enablePages } from "../lib/github.ts";
 import {
@@ -18,15 +19,74 @@ import {
 } from "../lib/templates.ts";
 import type { BackendType, RegistryEntry } from "../types.ts";
 
-const SUPABASE_SQL_RAW = `create table if not exists wiki_pages (
+const SUPABASE_SQL_RAW = `
+-- wiki_pages: optional user_id (NULL = single-tenant / service key); multi-user rows set user_id.
+-- One row per (user_id, wiki_id, path); NULL user_id counts as one scope (PostgreSQL 15+).
+create table if not exists public.wiki_pages (
+  user_id uuid references auth.users (id) on delete cascade,
   wiki_id text not null,
   path text not null,
   content text not null,
-  updated_at timestamptz default now(),
-  primary key (wiki_id, path)
-)`;
+  updated_at timestamptz not null default now(),
+  constraint wiki_pages_scope_unique unique nulls not distinct (user_id, wiki_id, path)
+);
 
-const SUPABASE_SQL = `-- Run this in your Supabase SQL Editor:\n${SUPABASE_SQL_RAW};`;
+create or replace function public.wiki_pages_set_user_id()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if tg_op = 'INSERT' then
+    new.user_id := coalesce(new.user_id, auth.uid());
+  elsif tg_op = 'UPDATE' then
+    if old.user_id is not null then
+      new.user_id := old.user_id;
+    else
+      new.user_id := coalesce(new.user_id, auth.uid());
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists wiki_pages_set_user_id on public.wiki_pages;
+create trigger wiki_pages_set_user_id
+  before insert or update on public.wiki_pages
+  for each row
+  execute function public.wiki_pages_set_user_id();
+
+alter table public.wiki_pages enable row level security;
+
+drop policy if exists wiki_pages_authenticated_select on public.wiki_pages;
+create policy wiki_pages_authenticated_select on public.wiki_pages
+  for select to authenticated
+  using (user_id is null or auth.uid() = user_id);
+
+drop policy if exists wiki_pages_authenticated_insert on public.wiki_pages;
+create policy wiki_pages_authenticated_insert on public.wiki_pages
+  for insert to authenticated
+  with check (user_id is null or auth.uid() = user_id);
+
+drop policy if exists wiki_pages_authenticated_update on public.wiki_pages;
+create policy wiki_pages_authenticated_update on public.wiki_pages
+  for update to authenticated
+  using (user_id is null or auth.uid() = user_id)
+  with check (user_id is null or auth.uid() = user_id);
+
+drop policy if exists wiki_pages_authenticated_delete on public.wiki_pages;
+create policy wiki_pages_authenticated_delete on public.wiki_pages
+  for delete to authenticated
+  using (user_id is null or auth.uid() = user_id);
+
+revoke all on public.wiki_pages from public;
+revoke all on public.wiki_pages from anon;
+grant select, insert, update, delete on public.wiki_pages to authenticated;
+`.trim();
+
+const SUPABASE_SQL = `-- Run this in your Supabase SQL Editor (new projects). Requires PostgreSQL 15+ (unique nulls not distinct). Older wiki_pages layouts need a manual migration or drop/recreate.
+${SUPABASE_SQL_RAW}`;
 
 export function makeInitCommand(): Command {
   return new Command("init")
@@ -175,27 +235,45 @@ export function makeInitCommand(): Command {
         await saveConfig(targetDir, config);
 
         if (backend === "supabase") {
-          // Supabase: check if table exists before writing initial pages
-          const provider = await createProvider(config, targetDir);
-          let tableExists = true;
-          try {
-            await provider.listPages();
-          } catch {
-            tableExists = false;
-          }
+          const accessToken =
+            process.env.LLMWIKI_SUPABASE_ACCESS_TOKEN?.trim() ||
+            config.supabase?.access_token?.trim() ||
+            undefined;
 
-          if (tableExists) {
-            await provider.writePage("SCHEMA.md", getDefaultSchema(name, domain));
-            await provider.writePage("wiki/index.md", getDefaultIndex());
-            await provider.writePage("wiki/log.md", getDefaultLog());
-          } else {
+          const probe = await probeWikiPagesTable(
+            options.supabaseUrl!,
+            options.supabaseKey!,
+            { accessToken },
+          );
+
+          if (!probe.ok) {
             console.log(`\n${SUPABASE_SQL}\n`);
-            console.log(
-              "Table wiki_pages not found. Run the SQL above in your Supabase SQL Editor,",
+            console.error(`wiki_pages is missing or incompatible: ${probe.message}`);
+            console.error(
+              "Run the SQL above in the Supabase SQL Editor, then re-run wiki init. PostgreSQL 15+ is required (unique nulls not distinct).",
             );
-            console.log(
-              "then re-run this command.",
-            );
+          } else {
+            const provider = await createProvider(config, targetDir, {
+              supabaseAccessToken: accessToken,
+            });
+            try {
+              await provider.writePage("SCHEMA.md", getDefaultSchema(name, domain));
+              await provider.writePage("wiki/index.md", getDefaultIndex());
+              await provider.writePage("wiki/log.md", getDefaultLog());
+            } catch (err: unknown) {
+              const msg = err instanceof Error ? err.message : String(err);
+              const looksLikeSchema =
+                /column .* does not exist|relation "wiki_pages" does not exist|constraint|unique|null value in column|violates not-null|there is no unique or exclusion constraint matching/i.test(
+                  msg,
+                );
+              if (looksLikeSchema) {
+                console.log(`\n${SUPABASE_SQL}\n`);
+              }
+              console.error(`Initial Supabase writes failed: ${msg}`);
+              console.error(
+                "If this is RLS or permissions, use the anon project key plus LLMWIKI_SUPABASE_ACCESS_TOKEN (Supabase user JWT). If SQL was printed above, apply it in the Supabase SQL Editor and re-run init.",
+              );
+            }
           }
         } else {
           // Filesystem/git: create local directory structure + files

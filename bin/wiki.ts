@@ -17,8 +17,11 @@ import { makeBacklinksCommand } from "../src/commands/backlinks.ts";
 import { makeOrphansCommand } from "../src/commands/orphans.ts";
 import { makeStatusCommand } from "../src/commands/status.ts";
 import { makeSkillCommand } from "../src/commands/skill.ts";
+import { makeProfileCommand } from "../src/commands/profile-cmd.ts";
 import { resolveWiki } from "../src/lib/resolver.ts";
-import { createProvider } from "../src/lib/storage.ts";
+import { loadRegistry, getStorageProfile } from "../src/lib/registry.ts";
+import { createProvider, effectiveFilesystemRoot } from "../src/lib/storage.ts";
+import { resolveStorageProfile, compositeSupabaseWikiId } from "../src/lib/supabase-profile.ts";
 import type { GlobalOptions, WikiContext } from "../src/types.ts";
 
 const program = new Command();
@@ -27,13 +30,18 @@ program
   .name("wiki")
   .description("CLI tool for LLM agents to build and maintain knowledge bases")
   .version("0.1.5")
-  .option("-w, --wiki <id>", "specify wiki by registry id");
+  .option("-w, --wiki <id>", "specify wiki by registry id")
+  .option(
+    "-p, --profile <id>",
+    "Storage profile slug: filesystem/git use profiles/<slug>/; Supabase uses composite wiki_id (env: LLMWIKI_PROFILE)",
+  );
 
 // Commands that do NOT require wiki resolution
 program.addCommand(makeInitCommand());
 program.addCommand(makeRegistryCommand());
 program.addCommand(makeUseCommand());
 program.addCommand(makeSkillCommand());
+program.addCommand(makeProfileCommand());
 
 // Commands that require wiki resolution
 program.addCommand(makeReadCommand());
@@ -53,11 +61,18 @@ program.addCommand(makeStatusCommand());
 const SKIP_RESOLUTION = new Set(["init", "registry", "use", "skill"]);
 
 program.hook("preAction", async (thisCommand, actionCommand) => {
-  if (SKIP_RESOLUTION.has(actionCommand.name())) return;
+  const cmdName = actionCommand.name();
+  if (
+    SKIP_RESOLUTION.has(cmdName) &&
+    !(cmdName === "use" && actionCommand.parent?.name() === "profile")
+  ) {
+    return;
+  }
 
-  let resolved;
+  let resolved: Awaited<ReturnType<typeof resolveWiki>>;
+  let globalOpts: GlobalOptions;
   try {
-    const globalOpts = thisCommand.optsWithGlobals<GlobalOptions>();
+    globalOpts = thisCommand.optsWithGlobals<GlobalOptions>();
     resolved = await resolveWiki(globalOpts);
   } catch (err: any) {
     console.error(err.message);
@@ -71,9 +86,39 @@ program.hook("preAction", async (thisCommand, actionCommand) => {
     process.exit(1);
   }
 
+  const registry = await loadRegistry();
+  const { profile, source } = resolveStorageProfile({
+    envValue: process.env.LLMWIKI_PROFILE,
+    cliValue: globalOpts.profile,
+    registryValue: getStorageProfile(registry, resolved.id),
+    configValue: resolved.config.profile ?? resolved.config.supabase?.profile,
+  });
+
+  const backend = resolved.config.backend ?? "filesystem";
+  const effectiveRoot =
+    backend === "supabase"
+      ? resolved.root
+      : effectiveFilesystemRoot(resolved.root, profile);
+  const supabaseWikiId =
+    backend === "supabase"
+      ? profile !== undefined
+        ? compositeSupabaseWikiId(resolved.config.name, profile)
+        : resolved.config.name
+      : undefined;
+
+  const provider = await createProvider(resolved.config, resolved.root, {
+    storageProfile: profile,
+  });
+
   const context: WikiContext = {
     ...resolved,
-    provider: await createProvider(resolved.config, resolved.root),
+    provider,
+    storageScope: {
+      profile,
+      source,
+      effectiveRoot,
+      supabaseWikiId,
+    },
   };
   actionCommand.setOptionValueWithSource("wikiContext", context, "cli");
 });

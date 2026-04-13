@@ -30,6 +30,7 @@ src/
     wiki.ts              # WikiManager: filesystem StorageProvider
     git-provider.ts      # GitProvider: filesystem + auto-commit + auto-push
     supabase-provider.ts # SupabaseProvider: Supabase database StorageProvider
+    supabase-wiki-pages-probe.ts # init-time check for wiki_pages schema; drives printed SQL
     config.ts            # .llmwiki.yaml read/write
     registry.ts          # Global registry (~/.config/llmwiki/registry.yaml)
     resolver.ts          # Wiki resolution chain (--wiki → cwd → walk up → default)
@@ -66,6 +67,7 @@ test/
   filesystem-provider.test.ts # Filesystem provider contract tests
   git-provider.test.ts   # GitProvider auto-commit tests
   supabase-provider.test.ts # SupabaseProvider with mocked client
+  supabase-wiki-pages-probe.test.ts # Schema probe (mocked @supabase/supabase-js)
   github.test.ts         # GitHub API with mocked fetch
   commands.test.ts       # End-to-end CLI command integration tests
 docs/
@@ -121,7 +123,7 @@ wiki status [--json]                # Wiki overview stats
 - **StorageProvider pattern**: All page I/O goes through the `StorageProvider` interface (5 methods: readPage, writePage, appendPage, pageExists, listPages). Three implementations:
   - `WikiManager` — filesystem (default)
   - `GitProvider` — wraps WikiManager, auto-commits + auto-pushes on write/append
-  - `SupabaseProvider` — pages in Supabase `wiki_pages` table (dynamic import, optional dependency)
+  - `SupabaseProvider` — pages in Supabase `wiki_pages` table (dynamic import, optional dependency). Nullable `user_id` (NULL = shared scope); with a user JWT, queries filter `user_id = sub`; without, they filter `user_id IS NULL`. `wiki init --backend supabase` calls `probeWikiPagesTable` first; on failure or schema-like seed write errors it prints canonical DDL (PostgreSQL 15+ for `unique nulls not distinct`).
 - **Provider factory**: `createProvider(config, root)` in `src/lib/storage.ts`. Async (for dynamic Supabase import). Called once in preAction hook, injected as `ctx.provider`.
 - **Commander pattern**: Each command is a factory function (`makeXxxCommand()`) returning a `Command` instance, registered via `program.addCommand()`.
 - **preAction hook**: Resolves which wiki to target, creates the StorageProvider, attaches both to `WikiContext`. Commands in `SKIP_RESOLUTION` set (init, registry, use, skill) bypass this.

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
-import { mkdtemp, rm } from "fs/promises";
+import { mkdtemp, rm, readFile } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
 import { createProvider } from "../src/lib/storage.ts";
@@ -40,6 +40,16 @@ describe("createProvider", () => {
   it("creates a git provider", async () => {
     const gitProvider = await createProvider(makeConfig("git"), testDir);
     expect(gitProvider).toBeInstanceOf(GitProvider);
+  });
+
+  it("filesystem provider with storageProfile writes under profiles/slug", async () => {
+    const provider = await createProvider(makeConfig("filesystem"), testDir, {
+      storageProfile: "alice",
+    });
+    await provider.writePage("wiki/note.md", "scoped");
+    const full = join(testDir, "profiles", "alice", "wiki", "note.md");
+    const content = await readFile(full, "utf-8");
+    expect(content).toBe("scoped");
   });
 
   it("rejects supabase without credentials", async () => {

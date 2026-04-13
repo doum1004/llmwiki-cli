@@ -4,12 +4,22 @@ import type { StorageProvider } from "../types.ts";
 
 export class GitProvider implements StorageProvider {
   private wiki: WikiManager;
+  /** Repository root (git operations). */
   public readonly root: string;
   private gitConfig?: { token: string; repo: string };
 
-  constructor(root: string, gitConfig?: { token: string; repo: string }) {
+  /**
+   * @param root Git repository root (for commit/push).
+   * @param gitConfig Optional remote credentials.
+   * @param wikiDataRoot Directory for markdown I/O; defaults to `root`. Use `join(root, "profiles", slug)` for profiles.
+   */
+  constructor(
+    root: string,
+    gitConfig?: { token: string; repo: string },
+    wikiDataRoot?: string,
+  ) {
     this.root = root;
-    this.wiki = new WikiManager(root);
+    this.wiki = new WikiManager(wikiDataRoot ?? root);
     this.gitConfig = gitConfig;
   }
 

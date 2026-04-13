@@ -59,7 +59,7 @@ export function makeStatusCommand(): Command {
       const info: StatusInfo = {
         name: ctx.config.name,
         domain: ctx.config.domain,
-        path: ctx.root,
+        path: ctx.storageScope.effectiveRoot,
         created: ctx.config.created,
         pages: { total: pages.length, byDir },
         links: {
