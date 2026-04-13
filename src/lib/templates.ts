@@ -275,6 +275,27 @@ function stripFrontmatter(content) {
   return content.trim();
 }
 
+function extractFrontmatterField(content, field) {
+  const m = content.match(/^---\\r?\\n([\\s\\S]*?)\\r?\\n---/);
+  if (!m) return null;
+  const line = m[1].split(/\\r?\\n/).find((l) => l.startsWith(field + ":"));
+  if (!line) return null;
+  return line.slice(field.length + 1).trim().replace(/^['"]|['"]$/g, "") || null;
+}
+
+function parseLogEntries(wikiDir) {
+  const logPath = path.join(wikiDir, "log.md");
+  if (!fs.existsSync(logPath)) return [];
+  const content = fs.readFileSync(logPath, "utf-8");
+  const entries = [];
+  const re = /##\\s+\\[([^\\]]+)\\]\\s+([^|]+)\\|\\s*(.+)/g;
+  let match;
+  while ((match = re.exec(content)) !== null) {
+    entries.push({ time: match[1].trim(), type: match[2].trim(), message: match[3].trim() });
+  }
+  return entries;
+}
+
 const wikiPrefix = WIKI_DIR.replace(/\\\\/g, "/").replace(/\\/$/, "") + "/";
 
 function resolveLink(target, allFiles) {
@@ -314,7 +335,7 @@ for (const file of files) {
   const content = fs.readFileSync(file, "utf-8");
   const relPath = file.replace(/\\\\/g, "/");
   const dir = relDir(relPath);
-  nodes.push({ id: relPath, title: extractTitle(content, file), dir, body: stripFrontmatter(content) });
+  nodes.push({ id: relPath, title: extractTitle(content, file), dir, body: stripFrontmatter(content), created: extractFrontmatterField(content, "created"), updated: extractFrontmatterField(content, "updated") });
 
   let match;
   const re = new RegExp(WIKILINK_RE.source, "g");
@@ -326,12 +347,13 @@ for (const file of files) {
   }
 }
 
+const activity = parseLogEntries(WIKI_DIR);
 fs.mkdirSync(OUT_DIR, { recursive: true });
 fs.writeFileSync(
   path.join(OUT_DIR, "graph.json"),
-  JSON.stringify({ nodes, edges }, null, 2)
+  JSON.stringify({ nodes, edges, activity }, null, 2)
 );
-console.log("Graph: " + nodes.length + " nodes, " + edges.length + " edges → dist/graph.json");
+console.log("Graph: " + nodes.length + " nodes, " + edges.length + " edges, " + activity.length + " log entries → dist/graph.json");
 `;
 }
 
@@ -675,6 +697,17 @@ const html = \`<!DOCTYPE html>
     .tooltip .tt-title { font-weight: 700; color: #fff; margin-bottom: 0.2rem; }
     .tooltip .tt-path { font-size: 0.72rem; opacity: 0.75; word-break: break-all; }
     .tooltip .tt-meta { font-size: 0.7rem; opacity: 0.8; margin-top: 0.35rem; }
+    #readerDates {
+      display: block;
+      margin-top: 0.2rem;
+      font-size: 0.72rem;
+      opacity: 0.65;
+      font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+    }
+    .viz-activity { font-size: 0.74rem; line-height: 1.45; margin-bottom: 0.5rem; }
+    .viz-activity-item { padding: 0.2rem 0; border-bottom: 1px dashed rgba(92,61,46,0.15); }
+    .viz-activity-item .act-type { font-weight: 600; color: var(--wood); text-transform: uppercase; font-size: 0.68rem; letter-spacing: 0.04em; }
+    .viz-activity-item .act-time { opacity: 0.6; font-size: 0.68rem; }
   </style>
 </head>
 <body class="viz-root">
@@ -702,6 +735,8 @@ const html = \`<!DOCTYPE html>
       <div class="viz-legend-row"><span class="swatch" style="background:#ff9800"></span><span><strong>Sources</strong> — readings &amp; inputs</span></div>
       <div class="viz-legend-row"><span class="swatch" style="background:#ab47bc"></span><span><strong>Synthesis</strong> — cross-cutting views</span></div>
       <div class="viz-legend-row"><span class="swatch" style="background:#888"></span><span><strong>Other</strong> — index, log, templates…</span></div>
+      <h2>Recent Activity</h2>
+      <div id="activityFeed" class="viz-activity"></div>
       <p class="viz-hint">Tip: click a node in the graph to open the full page in the reader column and spotlight its neighborhood. On small screens the reader stacks below the graph. Rebuild graph + site after edits. Click the same node again to clear.</p>
     </aside>
     <div class="viz-canvas-wrap" aria-label="Graph canvas">
@@ -711,6 +746,7 @@ const html = \`<!DOCTYPE html>
       <div class="viz-doc-head">
         <span id="readerTitle"></span>
         <span id="readerPath"></span>
+        <span id="readerDates"></span>
       </div>
       <div id="readerBody" class="viz-doc-body md-viewer" aria-live="polite">
         <p class="viz-reader-empty">Click a page in the graph to read it here.</p>
@@ -731,10 +767,17 @@ const html = \`<!DOCTYPE html>
     function showReader(d) {
       const titleEl = document.getElementById("readerTitle");
       const pathEl = document.getElementById("readerPath");
+      const datesEl = document.getElementById("readerDates");
       const bodyEl = document.getElementById("readerBody");
       if (!titleEl || !pathEl || !bodyEl) return;
       titleEl.textContent = d.title || d.id;
       pathEl.textContent = d.id;
+      if (datesEl) {
+        const parts = [];
+        if (d.created) parts.push("created " + d.created);
+        if (d.updated && d.updated !== d.created) parts.push("updated " + d.updated);
+        datesEl.textContent = parts.join(" · ");
+      }
       const raw = typeof d.body === "string" ? d.body : "";
       if (!raw) {
         bodyEl.innerHTML = DOMPurify.sanitize(
@@ -749,9 +792,11 @@ const html = \`<!DOCTYPE html>
     function clearReader() {
       const titleEl = document.getElementById("readerTitle");
       const pathEl = document.getElementById("readerPath");
+      const datesEl = document.getElementById("readerDates");
       const bodyEl = document.getElementById("readerBody");
       if (titleEl) titleEl.textContent = "";
       if (pathEl) pathEl.textContent = "";
+      if (datesEl) datesEl.textContent = "";
       if (bodyEl) {
         bodyEl.innerHTML = DOMPurify.sanitize(
           '<p class="viz-reader-empty">Click a page in the graph to read it here.</p>',
@@ -897,7 +942,8 @@ const html = \`<!DOCTYPE html>
         '<div class="tt-title"></div><div class="tt-path"></div><div class="tt-meta"></div>';
       tooltip.querySelector(".tt-title").textContent = d.title;
       tooltip.querySelector(".tt-path").textContent = d.id;
-      tooltip.querySelector(".tt-meta").textContent = nbr + " connection" + (nbr === 1 ? "" : "s");
+      const connStr = nbr + " connection" + (nbr === 1 ? "" : "s");
+      tooltip.querySelector(".tt-meta").textContent = d.created ? connStr + " · " + d.created : connStr;
       positionTip(e);
     }
     function positionTip(e) {
@@ -1021,6 +1067,19 @@ const html = \`<!DOCTYPE html>
     });
 
     applyFocusOpacity();
+
+    const feed = document.getElementById("activityFeed");
+    if (feed && data.activity && data.activity.length) {
+      const recent = [...data.activity].reverse().slice(0, 8);
+      feed.innerHTML = DOMPurify.sanitize(
+        recent.map((a) =>
+          '<div class="viz-activity-item">' +
+          '<span class="act-type">' + a.type + '</span> ' + a.message +
+          '<br><span class="act-time">' + a.time + '</span></div>'
+        ).join(""),
+        { USE_PROFILES: { html: true } }
+      );
+    }
   </script>
 </body>
 </html>\`;
