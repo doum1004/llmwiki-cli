@@ -158,7 +158,7 @@ wiki commit "maintenance: fix lint issues"
 \`\`\`bash
 # One-time setup
 wiki auth login                      # authenticate with GitHub PAT
-wiki repo create my-wiki             # creates private repo + connects
+wiki init … --backend git --git-token <pat>  # auto-creates public wiki-<name> repo; PAT not saved in YAML
 
 # After making changes
 wiki push

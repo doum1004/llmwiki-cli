@@ -20,7 +20,8 @@ export async function createRepo(
     },
     body: JSON.stringify({
       name,
-      private: true,
+      // Public so GitHub Pages can be exercised without org visibility quirks; use --git-repo for a private remote.
+      private: false,
       description: "LLM Wiki",
       auto_init: false,
     }),

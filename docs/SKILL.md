@@ -13,7 +13,7 @@ The CLI supports three storage backends:
 | `supabase` | Pages stored in a Supabase database table | `wiki init my-wiki --backend supabase --supabase-url <url> --supabase-key <key>` |
 
 - **filesystem**: Simplest. Pages are `.md` files. No versioning.
-- **git**: Every `wiki write` and `wiki append` auto-commits and auto-pushes. Provide `--git-token` at init to enable GitHub sync. Omit for local-only git.
+- **git**: Every `wiki write` and `wiki append` auto-commits and auto-pushes. Init with `--git-token` can auto-create a **public** `wiki-<name>` repo; the PAT is **not** saved in `.llmwiki.yaml` (use `LLMWIKI_GIT_TOKEN`, `GITHUB_TOKEN`, or `GIT_TOKEN` for later pushes). PAT needs **`workflow`** scope (or fine-grained equivalent) to push `.github/workflows/wiki-viz.yml`. Omit `--git-token` for local-only git.
 - **supabase**: Pages live in `wiki_pages` (no local files). Requires `@supabase/supabase-js`. **`wiki init --backend supabase`** probes the table; if it is missing or wrong, it prints **full DDL** (PostgreSQL **15+**: nullable `user_id`, `unique nulls not distinct (user_id, wiki_id, path)`, trigger, RLS). `user_id` **NULL** = shared partition (typical with **service role**); non-null rows are per-user. RLS for `authenticated`: `user_id is null or auth.uid() = user_id`. Prefer **anon** key + `LLMWIKI_SUPABASE_ACCESS_TOKEN` (user JWT) when you want RLS; service role bypasses RLS.
 - **Profiles (filesystem, git, supabase):** `wiki profile use <slug>`, `--profile`, `LLMWIKI_PROFILE`, or `profile` in `.llmwiki.yaml` choose a namespace. Local backends store files under `profiles/<slug>/` in the wiki directory; Supabase uses composite `wiki_id`. Not a security boundary on shared disks or shared API keys.
 

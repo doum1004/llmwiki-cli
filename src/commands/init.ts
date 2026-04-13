@@ -7,6 +7,7 @@ import { createProvider } from "../lib/storage.ts";
 import { probeWikiPagesTable } from "../lib/supabase-wiki-pages-probe.ts";
 import * as git from "../lib/git.ts";
 import { createRepo, getUsername, enablePages } from "../lib/github.ts";
+import { resolvedGitToken } from "../lib/git-credentials.ts";
 import {
   getDefaultConfig,
   getDefaultSchema,
@@ -162,7 +163,15 @@ export function makeInitCommand(): Command {
 
           // Commit the viz files
           await git.addAll(targetDir);
-          await git.commit(targetDir, "Add wiki visualization");
+          const vizCommit = await git.commit(targetDir, "Add wiki visualization");
+          if (vizCommit.ok) {
+            const rename = await git.renameCurrentBranchToMain(targetDir);
+            if (!rename.ok) {
+              console.error(
+                `Warning: could not rename branch to main: ${rename.output}`,
+              );
+            }
+          }
 
           // Push if remote is configured
           if (existingConfig.git) {
@@ -171,7 +180,10 @@ export function makeInitCommand(): Command {
             if (pushResult.ok) {
               console.log(`Pushed to ${existingConfig.git.repo}`);
               try {
-                await enablePages(existingConfig.git.token, existingConfig.git.repo);
+                const pagesToken = resolvedGitToken(existingConfig);
+                if (pagesToken) {
+                  await enablePages(pagesToken, existingConfig.git.repo);
+                }
               } catch {
                 // Non-fatal
               }
@@ -229,7 +241,7 @@ export function makeInitCommand(): Command {
 
         // Write config
         const config = getDefaultConfig(name, domain, backend, {
-          git: gitConfig,
+          git: gitConfig ? { repo: gitConfig.repo } : undefined,
           supabase: supabaseConfig,
         });
         await saveConfig(targetDir, config);
@@ -353,6 +365,13 @@ export function makeInitCommand(): Command {
                 console.error(
                   `Warning: initial commit failed: ${commitResult.output}`,
                 );
+              } else {
+                const rename = await git.renameCurrentBranchToMain(targetDir);
+                if (!rename.ok) {
+                  console.error(
+                    `Warning: could not rename branch to main: ${rename.output}`,
+                  );
+                }
               }
 
               // Add remote and push if git config provided
@@ -399,6 +418,11 @@ export function makeInitCommand(): Command {
           console.log("Enable GitHub Pages (Settings → Pages → Source: GitHub Actions) to see the graph.");
         }
         console.log("Registered in global registry.");
+        if (backend === "git" && gitConfig) {
+          console.log(
+            "Git: PAT is not stored in .llmwiki.yaml (avoids GitHub push secret scanning). Use LLMWIKI_GIT_TOKEN, GITHUB_TOKEN, or GIT_TOKEN in your environment for wiki write/push.",
+          );
+        }
       },
     );
 }

@@ -3,6 +3,7 @@ import { WikiManager } from "./wiki.ts";
 import { GitProvider } from "./git-provider.ts";
 import type { WikiConfig, StorageProvider } from "../types.ts";
 import { compositeSupabaseWikiId } from "./supabase-profile.ts";
+import { resolvedGitToken } from "./git-credentials.ts";
 
 export interface CreateProviderOptions {
   /**
@@ -39,12 +40,17 @@ export async function createProvider(
   switch (backend) {
     case "filesystem":
       return new WikiManager(effectiveFilesystemRoot(root, profile));
-    case "git":
+    case "git": {
+      const token = resolvedGitToken(config);
+      const repo = config.git?.repo;
+      const gitCfg =
+        repo && token ? { repo, token } : undefined;
       return new GitProvider(
         root,
-        config.git,
+        gitCfg,
         effectiveFilesystemRoot(root, profile),
       );
+    }
     case "supabase": {
       if (!config.supabase?.url || !config.supabase?.key) {
         throw new Error(

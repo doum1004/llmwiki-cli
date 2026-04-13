@@ -185,4 +185,13 @@ describe("git operations", () => {
     const result = await git.logFile(testDir, "nonexistent.md");
     expect(result.output).toBe("");
   });
+
+  it("renameCurrentBranchToMain leaves branch named main", async () => {
+    await writeFile(join(testDir, "f.md"), "x", "utf-8");
+    await git.addAll(testDir);
+    await git.commit(testDir, "c");
+    const r = await git.renameCurrentBranchToMain(testDir);
+    expect(r.ok).toBe(true);
+    expect(await git.currentBranch(testDir)).toBe("main");
+  });
 });

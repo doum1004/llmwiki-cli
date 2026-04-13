@@ -21,6 +21,11 @@ export function init(cwd: string): Promise<GitResult> {
   return run(["init"], cwd);
 }
 
+/** Rename the current branch to `main` (GitHub Pages + `github-pages` env default rules expect `main`). */
+export function renameCurrentBranchToMain(cwd: string): Promise<GitResult> {
+  return run(["branch", "-M", "main"], cwd);
+}
+
 export function addAll(cwd: string): Promise<GitResult> {
   return run(["add", "-A"], cwd);
 }

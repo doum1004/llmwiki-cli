@@ -19,7 +19,8 @@ export interface WikiConfig {
    */
   profile?: string;
   git?: {
-    token: string;
+    /** Prefer `LLMWIKI_GIT_TOKEN` or `GITHUB_TOKEN`; optional legacy field in YAML. */
+    token?: string;
     repo: string;
   };
   supabase?: {

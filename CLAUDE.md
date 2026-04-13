@@ -36,6 +36,7 @@ src/
     resolver.ts          # Wiki resolution chain (--wiki → cwd → walk up → default)
     git.ts               # Git operations via child_process.execFile
     github.ts            # GitHub API: createRepo, getUsername, enablePages
+    git-credentials.ts   # resolvedGitToken: env LLMWIKI_GIT_TOKEN / GITHUB_TOKEN / GIT_TOKEN, then YAML
     templates.ts         # Default file content (SCHEMA.md, index.md, log.md, viz workflow/scripts)
     search.ts            # Full-text search with term-frequency ranking
     index-manager.ts     # IndexManager: uses StorageProvider for index.md
@@ -68,6 +69,7 @@ test/
   git-provider.test.ts   # GitProvider auto-commit tests
   supabase-provider.test.ts # SupabaseProvider with mocked client
   supabase-wiki-pages-probe.test.ts # Schema probe (mocked @supabase/supabase-js)
+  git-credentials.test.ts # resolvedGitToken precedence
   github.test.ts         # GitHub API with mocked fetch
   commands.test.ts       # End-to-end CLI command integration tests
 docs/
@@ -128,7 +130,7 @@ wiki status [--json]                # Wiki overview stats
 - **Commander pattern**: Each command is a factory function (`makeXxxCommand()`) returning a `Command` instance, registered via `program.addCommand()`.
 - **preAction hook**: Resolves which wiki to target, creates the StorageProvider, attaches both to `WikiContext`. Commands in `SKIP_RESOLUTION` set (init, registry, use, skill) bypass this.
 - **Wiki resolution order**: `--wiki` flag → cwd `.llmwiki.yaml` → walk up directories → registry default.
-- **Credentials in config**: Git token/repo and Supabase URL/key stored in `.llmwiki.yaml`. No separate auth commands — everything via `wiki init` flags.
+- **Credentials in config**: Supabase URL/key in `.llmwiki.yaml`. Git stores **`git.repo` only**; PAT comes from `LLMWIKI_GIT_TOKEN`, `GITHUB_TOKEN`, or `GIT_TOKEN` (or legacy optional `git.token` in YAML). No separate auth commands — `wiki init` flags for first-time setup.
 - **IndexManager/LogManager**: Accept `StorageProvider` in constructor (not filesystem paths). Backend-agnostic.
 - **Registry**: Global at `~/.config/llmwiki/registry.yaml`, overridable via `LLMWIKI_CONFIG_DIR` env var (used in tests).
 - **Git**: All operations use `child_process.execFile`, return `{ ok: boolean, output: string }`.

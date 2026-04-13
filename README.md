@@ -206,6 +206,12 @@ wiki orphans               # pages nobody links to
 wiki status                # overview stats
 ```
 
+## Git backend and GitHub
+
+- **New repo:** With `--git-token` and no `--git-repo`, the CLI creates **`wiki-<name>` as a public repository** (straightforward to try GitHub Pages). Use `--git-repo owner/existing` to target a repo you already manage.
+- **Token not committed:** `.llmwiki.yaml` stores **`git.repo` only**, not your PAT, so GitHub’s push secret scanning does not reject commits. For **`wiki write` / `wiki append`** (auto-push), set **`LLMWIKI_GIT_TOKEN`**, **`GITHUB_TOKEN`**, or **`GIT_TOKEN`** in your environment.
+- **PAT permissions:** The token must be allowed to update **GitHub Actions workflow** files (classic PAT: include the **`workflow`** scope; fine-grained: grant workflow/Actions write). Otherwise the first push after init can fail on `.github/workflows/wiki-viz.yml`.
+
 ## Graph Visualization
 
 Git-backend wikis automatically include a GitHub Actions workflow that builds an interactive d3-force graph visualization of your wiki's link structure and deploys it to GitHub Pages.
@@ -216,7 +222,9 @@ Git-backend wikis automatically include a GitHub Actions workflow that builds an
 - **Opt-out**: use `--no-viz` to skip visualization scaffolding
 - **Add to existing wiki**: re-run `wiki init <dir> --viz` on an existing git wiki to add visualization files
 
-After init, enable GitHub Pages in your repo settings (Settings > Pages > Source: GitHub Actions).
+After a successful first push, init also tries to enable **GitHub Pages** (build: GitHub Actions). You can still configure it under **Settings → Pages → Source: GitHub Actions** if needed.
+
+**Branch name:** New git wikis rename the default branch to **`main`** before the first push so the **`github-pages`** Actions environment (which often only allows `main`) accepts deployment. If you see *“Branch master is not allowed to deploy to github-pages”*, rename locally with `git branch -M main`, push `main`, and under **Settings → General** set the **default branch** to `main` (and optionally delete the old `master` branch on GitHub).
 
 ## Multi-Wiki Support
 

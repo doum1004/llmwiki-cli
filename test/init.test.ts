@@ -351,9 +351,11 @@ describe("templates", () => {
 
   it("getVizWorkflow returns valid YAML with required fields", () => {
     const workflow = getVizWorkflow();
+    expect(workflow).toContain("GITHUB_REPOSITORY");
     const parsed = yaml.load(workflow) as any;
     expect(parsed.name).toBeTruthy();
     expect(parsed.on.push.branches).toContain("main");
+    expect(parsed.on.push.branches).toContain("master");
     expect(parsed.jobs["build-and-deploy"]).toBeDefined();
     expect(parsed.permissions.pages).toBe("write");
   });
@@ -363,13 +365,26 @@ describe("templates", () => {
     expect(script).toContain("\\[\\[([^\\]|]+)");
     expect(script).toContain("graph.json");
     expect(script).toContain("findMdFiles");
+    expect(script).toContain("stripFrontmatter");
+    expect(script).toContain("body:");
   });
 
   it("getBuildSiteScript references d3 CDN and produces index.html", () => {
     const script = getBuildSiteScript();
     expect(script).toContain("cdn.jsdelivr.net/npm/d3@7");
+    expect(script).toContain("cdn.jsdelivr.net/npm/marked@12");
+    expect(script).toContain("cdn.jsdelivr.net/npm/dompurify@3");
     expect(script).toContain("index.html");
     expect(script).toContain("forceSimulation");
+    expect(script).toContain("library-panel");
+    expect(script).toContain("viz-doc");
+    expect(script).toContain("md-viewer");
+    expect(script).toContain("readerBody");
+    expect(script).toContain("prefers-reduced-motion");
+    expect(script).toContain("process.env.GITHUB_REPOSITORY");
+    // Must embed JSON at build time (not a stray backslash before $, which breaks the browser)
+    expect(script).toContain("${" + "JSON.stringify(graph)};");
+    expect(script).not.toMatch(/const data = \\+\$\{JSON/);
   });
 
   it("getWikiGitignore includes node_modules and dist", () => {
