@@ -2,6 +2,22 @@
 
 <!-- New entries are prepended automatically by the publish workflow -->
 
+## v0.2.2 — 2026-04-13
+
+### Changes
+
+- feat: add frontmatter extraction and activity log parsing to templates (901d063)
+- Add foundational concepts and entities related to LLMs and AI agents (b19bd2e)
+- feat: enhance git integration and improve wiki initialization (51b4ce6)
+- feat: add support for storage profiles in wiki commands and providers (3082a07)
+- feat: add npm install and uninstall commands to permissions, and improve Supabase initialization logic (bd0107a)
+- feat: add GitHub Pages visualization support with scaffolding options for git backend (63de75a)
+
+**Full diff:** [v0.2.1...v0.2.2](https://github.com/doum1004/llmwiki-cli/compare/v0.2.1...v0.2.2)
+
+---
+
+
 ## v0.2.1 — 2026-04-11
 
 ### Changes
