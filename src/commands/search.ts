@@ -3,7 +3,7 @@ import { search } from "../lib/search.ts";
 import { loadRegistry, getStorageProfile } from "../lib/registry.ts";
 import { loadConfig } from "../lib/config.ts";
 import { createProvider } from "../lib/storage.ts";
-import { resolveStorageProfile } from "../lib/supabase-profile.ts";
+import { resolveStorageProfile } from "../lib/profile.ts";
 import type { GlobalOptions, WikiContext } from "../types.ts";
 import type { SearchResult } from "../lib/search.ts";
 
@@ -32,7 +32,7 @@ export function makeSearchCommand(): Command {
             envValue: process.env.LLMWIKI_PROFILE,
             cliValue: globalOpts.profile,
             registryValue: getStorageProfile(registry, id),
-            configValue: config.profile ?? config.supabase?.profile,
+            configValue: config.profile,
           });
           const wiki = await createProvider(config, entry.path, {
             storageProfile: profile,

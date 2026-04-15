@@ -1,4 +1,4 @@
-export type BackendType = "filesystem" | "git" | "supabase";
+export type BackendType = "filesystem" | "git";
 
 export interface StorageProvider {
   readPage(relativePath: string): Promise<string | null>;
@@ -13,26 +13,12 @@ export interface WikiConfig {
   domain: string;
   created: string;
   backend?: BackendType;
-  /**
-   * Optional storage profile for any backend: Supabase composite wiki_id, or filesystem/git
-   * subdirectory `profiles/<slug>/`. Prefer this over supabase.profile.
-   */
+  /** Optional storage profile: filesystem/git subdirectory `profiles/<slug>/`. */
   profile?: string;
   git?: {
     /** Prefer `LLMWIKI_GIT_TOKEN` or `GITHUB_TOKEN`; optional legacy field in YAML. */
     token?: string;
     repo: string;
-  };
-  supabase?: {
-    url: string;
-    key: string;
-    /** Optional namespace; rows use wiki_id "name:profile". Organizational only with a shared API key. */
-    profile?: string;
-    /**
-     * Optional Supabase Auth access token (JWT) for PostgREST. Prefer env LLMWIKI_SUPABASE_ACCESS_TOKEN;
-     * storing tokens in YAML is risky. Required for RLS-backed tables when not using the service role.
-     */
-    access_token?: string;
   };
   paths: {
     raw: string;
@@ -52,10 +38,8 @@ export interface RegistryEntry {
 export interface Registry {
   wikis: Record<string, RegistryEntry>;
   default: string | null;
-  /** Registry wiki id → active storage profile slug (all backends). */
+  /** Registry wiki id → active storage profile slug. */
   storageProfiles?: Record<string, string>;
-  /** @deprecated Merged into storageProfiles on load; not written on new saves. */
-  supabaseProfiles?: Record<string, string>;
 }
 
 export interface ResolvedWiki {
@@ -66,19 +50,14 @@ export interface ResolvedWiki {
 
 export type StorageProfileSource = "env" | "cli" | "registry" | "config" | "default";
 
-/** @deprecated Use StorageProfileSource */
-export type SupabaseProfileSource = StorageProfileSource;
-
 export interface WikiContext extends ResolvedWiki {
   provider: StorageProvider;
-  /** Resolved profile, source, and physical/logical storage location for all backends. */
+  /** Resolved profile, source, and physical/logical storage location. */
   storageScope: {
     profile: string | undefined;
     source: StorageProfileSource;
     /** Directory used for filesystem/git page I/O (under `profiles/<slug>` when profile is set). */
     effectiveRoot: string;
-    /** Supabase only: composite wiki_id. */
-    supabaseWikiId?: string;
   };
 }
 

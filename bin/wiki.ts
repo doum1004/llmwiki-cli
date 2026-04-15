@@ -21,7 +21,7 @@ import { makeProfileCommand } from "../src/commands/profile-cmd.ts";
 import { resolveWiki } from "../src/lib/resolver.ts";
 import { loadRegistry, getStorageProfile } from "../src/lib/registry.ts";
 import { createProvider, effectiveFilesystemRoot } from "../src/lib/storage.ts";
-import { resolveStorageProfile, compositeSupabaseWikiId } from "../src/lib/supabase-profile.ts";
+import { resolveStorageProfile } from "../src/lib/profile.ts";
 import type { GlobalOptions, WikiContext } from "../src/types.ts";
 
 const program = new Command();
@@ -33,7 +33,7 @@ program
   .option("-w, --wiki <id>", "specify wiki by registry id")
   .option(
     "-p, --profile <id>",
-    "Storage profile slug: filesystem/git use profiles/<slug>/; Supabase uses composite wiki_id (env: LLMWIKI_PROFILE)",
+    "Storage profile slug: uses profiles/<slug>/ subdirectory (env: LLMWIKI_PROFILE)",
   );
 
 // Commands that do NOT require wiki resolution
@@ -91,20 +91,10 @@ program.hook("preAction", async (thisCommand, actionCommand) => {
     envValue: process.env.LLMWIKI_PROFILE,
     cliValue: globalOpts.profile,
     registryValue: getStorageProfile(registry, resolved.id),
-    configValue: resolved.config.profile ?? resolved.config.supabase?.profile,
+    configValue: resolved.config.profile,
   });
 
-  const backend = resolved.config.backend ?? "filesystem";
-  const effectiveRoot =
-    backend === "supabase"
-      ? resolved.root
-      : effectiveFilesystemRoot(resolved.root, profile);
-  const supabaseWikiId =
-    backend === "supabase"
-      ? profile !== undefined
-        ? compositeSupabaseWikiId(resolved.config.name, profile)
-        : resolved.config.name
-      : undefined;
+  const effectiveRoot = effectiveFilesystemRoot(resolved.root, profile);
 
   const provider = await createProvider(resolved.config, resolved.root, {
     storageProfile: profile,
@@ -117,7 +107,6 @@ program.hook("preAction", async (thisCommand, actionCommand) => {
       profile,
       source,
       effectiveRoot,
-      supabaseWikiId,
     },
   };
   actionCommand.setOptionValueWithSource("wikiContext", context, "cli");

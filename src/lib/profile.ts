@@ -1,6 +1,5 @@
 import type { StorageProfileSource } from "../types.ts";
 
-/** Slug used as the second segment of composite Supabase wiki_id (name:profile) or filesystem path segment. */
 const PROFILE_RE = /^[a-zA-Z0-9_-]{1,64}$/;
 
 export function validateProfileSlug(raw: string): string {
@@ -11,10 +10,6 @@ export function validateProfileSlug(raw: string): string {
     );
   }
   return s;
-}
-
-export function compositeSupabaseWikiId(wikiName: string, profile: string): string {
-  return `${wikiName}:${profile}`;
 }
 
 /**
@@ -40,6 +35,3 @@ export function resolveStorageProfile(params: {
   }
   return { profile: undefined, source: "default" };
 }
-
-/** @deprecated Use resolveStorageProfile */
-export const resolveSupabaseProfile = resolveStorageProfile;

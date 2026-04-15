@@ -4,18 +4,16 @@ You are operating a wiki CLI that manages markdown knowledge bases. You are the 
 
 ## Storage Backends
 
-The CLI supports three storage backends:
+The CLI supports two storage backends:
 
 | Backend | Description | Init |
 |---------|-------------|------|
 | `filesystem` (default) | Plain markdown files on disk, no versioning | `wiki init my-wiki` |
 | `git` | Filesystem + auto-commit + auto-push to GitHub | `wiki init my-wiki --backend git --git-token <pat>` |
-| `supabase` | Pages stored in a Supabase database table | `wiki init my-wiki --backend supabase --supabase-url <url> --supabase-key <key>` |
 
 - **filesystem**: Simplest. Pages are `.md` files. No versioning.
 - **git**: Every `wiki write` and `wiki append` auto-commits and auto-pushes. Init with `--git-token` can auto-create a **public** `wiki-<name>` repo; the PAT is **not** saved in `.llmwiki.yaml` (use `LLMWIKI_GIT_TOKEN`, `GITHUB_TOKEN`, or `GIT_TOKEN` for later pushes). PAT needs **`workflow`** scope (or fine-grained equivalent) to push `.github/workflows/wiki-viz.yml`. Omit `--git-token` for local-only git.
-- **supabase**: Pages live in `wiki_pages` (no local files). Requires `@supabase/supabase-js`. **`wiki init --backend supabase`** probes the table; if it is missing or wrong, it prints **full DDL** (PostgreSQL **15+**: nullable `user_id`, `unique nulls not distinct (user_id, wiki_id, path)`, trigger, RLS). `user_id` **NULL** = shared partition (typical with **service role**); non-null rows are per-user. RLS for `authenticated`: `user_id is null or auth.uid() = user_id`. Prefer **anon** key + `LLMWIKI_SUPABASE_ACCESS_TOKEN` (user JWT) when you want RLS; service role bypasses RLS.
-- **Profiles (filesystem, git, supabase):** `wiki profile use <slug>`, `--profile`, `LLMWIKI_PROFILE`, or `profile` in `.llmwiki.yaml` choose a namespace. Local backends store files under `profiles/<slug>/` in the wiki directory; Supabase uses composite `wiki_id`. Not a security boundary on shared disks or shared API keys.
+- **Profiles:** `wiki profile use <slug>`, `--profile`, `LLMWIKI_PROFILE`, or `profile` in `.llmwiki.yaml` choose a namespace. Files are stored under `profiles/<slug>/` in the wiki directory. Not a security boundary on shared disks.
 
 ## Critical Patterns
 
@@ -72,7 +70,7 @@ Page content here. Use [[wikilinks]] to connect pages.
 - Use kebab-case: `my-topic-name.md`
 - One topic per file — split large topics into sub-pages
 
-### Directory structure (filesystem/git backends)
+### Directory structure
 
 ```
 .github/              # Only with --backend git (--viz, default)
@@ -91,8 +89,6 @@ wiki/                 # LLM-generated pages (all knowledge lives here)
   sources/            # One summary per ingested source
   synthesis/          # Cross-cutting analysis
 ```
-
-For supabase backend, the same paths are used as keys in the database — no local directory structure is created.
 
 ## Workflows
 
@@ -181,11 +177,10 @@ wiki search "neural networks" --all  # search across all wikis
 
 | Command | Description |
 |---------|-------------|
-| `wiki init [dir] --name <n> --domain <d> --backend <type>` | Create new wiki (backends: filesystem, git, supabase) |
+| `wiki init [dir] --name <n> --domain <d> --backend <type>` | Create new wiki (backends: filesystem, git) |
 | `wiki init [dir] --backend git --git-token <pat> [--git-repo owner/repo]` | Create git-backed wiki with GitHub sync + visualization |
 | `wiki init [dir] --backend git --no-viz` | Create git-backed wiki without visualization |
 | `wiki init [existing-dir] --viz` | Add visualization to existing git wiki |
-| `wiki init [dir] --backend supabase --supabase-url <url> --supabase-key <key>` | Create Supabase-backed wiki; prints DDL if `wiki_pages` is missing or incompatible |
 | `wiki registry` | List all registered wikis |
 | `wiki use [wiki-id]` | List wikis or set active wiki |
 

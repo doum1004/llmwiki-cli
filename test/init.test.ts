@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
-import { mkdtemp, rm, readdir, stat, writeFile, mkdir } from "fs/promises";
+import { mkdtemp, rm, readdir, stat } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
 import * as yaml from "js-yaml";
@@ -238,22 +238,6 @@ describe("registry", () => {
     expect(registry.storageProfiles).toBeUndefined();
   });
 
-  it("loadRegistry merges legacy supabaseProfiles into storageProfiles", async () => {
-    const regPath = join(configDir, "registry.yaml");
-    await mkdir(configDir, { recursive: true });
-    await writeFile(
-      regPath,
-      `wikis: {}
-default: null
-supabaseProfiles:
-  wiki1: legacy-user
-`,
-      "utf-8",
-    );
-    const registry = await loadRegistry();
-    expect(getStorageProfile(registry, "wiki1")).toBe("legacy-user");
-    expect(registry.storageProfiles?.wiki1).toBe("legacy-user");
-  });
 });
 
 // --- resolver ---

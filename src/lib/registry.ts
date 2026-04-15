@@ -3,7 +3,7 @@ import { join } from "path";
 import { readFile, writeFile, mkdir } from "fs/promises";
 import { homedir } from "os";
 import type { Registry, RegistryEntry } from "../types.ts";
-import { validateProfileSlug } from "./supabase-profile.ts";
+import { validateProfileSlug } from "./profile.ts";
 
 function getRegistryDir(): string {
   return process.env.LLMWIKI_CONFIG_DIR ?? join(homedir(), ".config", "llmwiki");
@@ -17,19 +17,16 @@ function emptyRegistry(): Registry {
   return { wikis: {}, default: null };
 }
 
-/** Merge legacy supabaseProfiles into storageProfiles and drop the legacy key from memory. */
 function normalizeRegistry(parsed: Registry | null): Registry {
   if (!parsed) return emptyRegistry();
   const wikis = parsed.wikis ?? {};
-  const legacy = parsed.supabaseProfiles ?? {};
-  const modern = parsed.storageProfiles ?? {};
-  const merged: Record<string, string> = { ...legacy, ...modern };
   const out: Registry = {
     wikis,
     default: parsed.default ?? null,
   };
-  if (Object.keys(merged).length > 0) {
-    out.storageProfiles = merged;
+  const profiles = parsed.storageProfiles ?? {};
+  if (Object.keys(profiles).length > 0) {
+    out.storageProfiles = profiles;
   }
   return out;
 }
@@ -50,7 +47,6 @@ export async function loadRegistry(): Promise<Registry> {
 export async function saveRegistry(registry: Registry): Promise<void> {
   await mkdir(getRegistryDir(), { recursive: true });
   const toSave = { ...registry };
-  delete toSave.supabaseProfiles;
   const content = yaml.dump(toSave, { lineWidth: 120, sortKeys: false });
   await writeFile(getRegistryPath(), content, "utf-8");
 }
@@ -98,9 +94,6 @@ export function getStorageProfile(registry: Registry, wikiId: string): string | 
   return v?.trim() ? v.trim() : undefined;
 }
 
-/** @deprecated Use getStorageProfile */
-export const getSupabaseProfile = getStorageProfile;
-
 /** Persist active storage profile for a registry wiki id. Pass null to remove. */
 export async function setStorageProfile(
   wikiId: string,
@@ -123,6 +116,3 @@ export async function setStorageProfile(
   await saveRegistry(registry);
   return true;
 }
-
-/** @deprecated Use setStorageProfile */
-export const setSupabaseProfile = setStorageProfile;

@@ -4,13 +4,13 @@
 
 A CLI tool that helps LLM agents (Claude Code, Codex, etc.) build and maintain personal knowledge bases. The CLI is the hands — it reads, writes, searches, and manages wiki files. The LLM is the brain — it decides what to create, update, and connect.
 
-**Key principle: The CLI never calls any LLM API. It is a pure storage tool with pluggable backends (filesystem, git, supabase).**
+**Key principle: The CLI never calls any LLM API. It is a pure storage tool with pluggable backends (filesystem, git).**
 
 ## Tech Stack
 
 - **Runtime**: Bun (development), Node.js (published bundle)
 - **Language**: TypeScript
-- **Dependencies**: commander (CLI), js-yaml (YAML parsing), @supabase/supabase-js (optional)
+- **Dependencies**: commander (CLI), js-yaml (YAML parsing)
 - **Build**: `bun build` bundles to `dist/wiki.js` targeting Node.js
 - **Tests**: Bun test runner (`bun test`)
 
@@ -29,8 +29,6 @@ src/
     storage.ts           # StorageProvider factory (createProvider)
     wiki.ts              # WikiManager: filesystem StorageProvider
     git-provider.ts      # GitProvider: filesystem + auto-commit + auto-push
-    supabase-provider.ts # SupabaseProvider: Supabase database StorageProvider
-    supabase-wiki-pages-probe.ts # init-time check for wiki_pages schema; drives printed SQL
     config.ts            # .llmwiki.yaml read/write
     registry.ts          # Global registry (~/.config/llmwiki/registry.yaml)
     resolver.ts          # Wiki resolution chain (--wiki → cwd → walk up → default)
@@ -44,7 +42,7 @@ src/
     frontmatter.ts       # YAML frontmatter parse/detect/add
     link-parser.ts       # Wikilink extraction and link graph building
   commands/
-    init.ts              # wiki init (--backend, --git-token, --viz, --supabase-url, etc.)
+    init.ts              # wiki init (--backend, --git-token, --viz)
     registry.ts          # wiki registry
     use.ts               # wiki use
     read.ts              # wiki read
@@ -67,8 +65,6 @@ test/
   storage.test.ts        # StorageProvider factory
   filesystem-provider.test.ts # Filesystem provider contract tests
   git-provider.test.ts   # GitProvider auto-commit tests
-  supabase-provider.test.ts # SupabaseProvider with mocked client
-  supabase-wiki-pages-probe.test.ts # Schema probe (mocked @supabase/supabase-js)
   git-credentials.test.ts # resolvedGitToken precedence
   github.test.ts         # GitHub API with mocked fetch
   commands.test.ts       # End-to-end CLI command integration tests
@@ -93,10 +89,9 @@ test-wiki-page/
 
 ### Wiki Management
 ```
-wiki init [dir] --name --domain --backend <filesystem|git|supabase>
+wiki init [dir] --name --domain --backend <filesystem|git>
 wiki init [dir] --backend git --git-token <pat> [--git-repo owner/repo]
 wiki init [dir] --backend git --no-viz              # Skip visualization scaffolding
-wiki init [dir] --backend supabase --supabase-url <url> --supabase-key <key>
 wiki init [existing-wiki-dir] --viz                 # Add visualization to existing git wiki
 wiki registry                       # List all wikis
 wiki use [wiki-id]                  # Set active wiki
@@ -131,15 +126,14 @@ wiki status [--json]                # Wiki overview stats
 
 ## Architecture
 
-- **StorageProvider pattern**: All page I/O goes through the `StorageProvider` interface (5 methods: readPage, writePage, appendPage, pageExists, listPages). Three implementations:
+- **StorageProvider pattern**: All page I/O goes through the `StorageProvider` interface (5 methods: readPage, writePage, appendPage, pageExists, listPages). Two implementations:
   - `WikiManager` — filesystem (default)
   - `GitProvider` — wraps WikiManager, auto-commits + auto-pushes on write/append
-  - `SupabaseProvider` — pages in Supabase `wiki_pages` table (dynamic import, optional dependency). Nullable `user_id` (NULL = shared scope); with a user JWT, queries filter `user_id = sub`; without, they filter `user_id IS NULL`. `wiki init --backend supabase` calls `probeWikiPagesTable` first; on failure or schema-like seed write errors it prints canonical DDL (PostgreSQL 15+ for `unique nulls not distinct`).
-- **Provider factory**: `createProvider(config, root)` in `src/lib/storage.ts`. Async (for dynamic Supabase import). Called once in preAction hook, injected as `ctx.provider`.
+- **Provider factory**: `createProvider(config, root)` in `src/lib/storage.ts`. Async. Called once in preAction hook, injected as `ctx.provider`.
 - **Commander pattern**: Each command is a factory function (`makeXxxCommand()`) returning a `Command` instance, registered via `program.addCommand()`.
 - **preAction hook**: Resolves which wiki to target, creates the StorageProvider, attaches both to `WikiContext`. Commands in `SKIP_RESOLUTION` set (init, registry, use, skill) bypass this.
 - **Wiki resolution order**: `--wiki` flag → cwd `.llmwiki.yaml` → walk up directories → registry default.
-- **Credentials in config**: Supabase URL/key in `.llmwiki.yaml`. Git stores **`git.repo` only**; PAT comes from `LLMWIKI_GIT_TOKEN`, `GITHUB_TOKEN`, or `GIT_TOKEN` (or legacy optional `git.token` in YAML). No separate auth commands — `wiki init` flags for first-time setup.
+- **Credentials in config**: Git stores **`git.repo` only**; PAT comes from `LLMWIKI_GIT_TOKEN`, `GITHUB_TOKEN`, or `GIT_TOKEN` (or legacy optional `git.token` in YAML). No separate auth commands — `wiki init` flags for first-time setup.
 - **IndexManager/LogManager**: Accept `StorageProvider` in constructor (not filesystem paths). Backend-agnostic.
 - **Registry**: Global at `~/.config/llmwiki/registry.yaml`, overridable via `LLMWIKI_CONFIG_DIR` env var (used in tests).
 - **Git**: All operations use `child_process.execFile`, return `{ ok: boolean, output: string }`.
@@ -175,7 +169,7 @@ See `docs/phase-{1-5}.md` for detailed tracking. All phases complete:
 - Phase 3: **COMPLETE** — index, log, commit, history, diff
 - Phase 4: **COMPLETE** — lint, links, backlinks, orphans, status
 - Phase 5: **COMPLETE** — auth, repo, push, pull, sync
-- Phase 6: **COMPLETE** — StorageProvider abstraction (filesystem, git, supabase backends)
+- Phase 6: **COMPLETE** — StorageProvider abstraction (filesystem, git backends)
 - Phase 7: **COMPLETE** — GitHub Pages visualization (GitHub Actions workflow, d3-force graph)
 
 ## Conventions

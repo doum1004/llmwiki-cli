@@ -52,12 +52,6 @@ describe("createProvider", () => {
     expect(content).toBe("scoped");
   });
 
-  it("rejects supabase without credentials", async () => {
-    expect(
-      createProvider(makeConfig("supabase"), testDir),
-    ).rejects.toThrow("Supabase config missing");
-  });
-
   it("throws for unknown backend", async () => {
     expect(
       createProvider(makeConfig("unknown" as any), testDir),

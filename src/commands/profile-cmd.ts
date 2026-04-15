@@ -5,7 +5,7 @@ import type { WikiContext } from "../types.ts";
 export function makeProfileCommand(): Command {
   const cmd = new Command("profile")
     .description(
-      "Storage profile: filesystem/git use profiles/<slug>/; Supabase uses composite wiki_id (not access control)",
+      "Storage profile: uses profiles/<slug>/ subdirectory for page I/O",
     );
 
   cmd
@@ -18,9 +18,6 @@ export function makeProfileCommand(): Command {
       console.log(`Effective storage root: ${s.effectiveRoot}`);
       console.log(`Profile segment: ${s.profile ?? "(none — default storage)"}`);
       console.log(`Source: ${s.source}`);
-      if (ctx.config.backend === "supabase" && s.supabaseWikiId !== undefined) {
-        console.log(`Supabase wiki_id: ${s.supabaseWikiId}`);
-      }
       const registry = await loadRegistry();
       const saved = getStorageProfile(registry, ctx.id);
       if (saved) {

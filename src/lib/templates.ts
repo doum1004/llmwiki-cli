@@ -7,7 +7,6 @@ export function getDefaultConfig(
   options?: {
     profile?: string;
     git?: { token?: string; repo: string };
-    supabase?: { url: string; key: string; profile?: string; access_token?: string };
   },
 ): WikiConfig {
   const config: WikiConfig = {
@@ -26,9 +25,6 @@ export function getDefaultConfig(
   }
   if (options?.git) {
     config.git = options.git;
-  }
-  if (options?.supabase) {
-    config.supabase = options.supabase;
   }
   return config;
 }

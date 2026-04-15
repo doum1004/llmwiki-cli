@@ -31,7 +31,7 @@ v
 wiki CLI (StorageProvider abstraction)
 |
 v
-filesystem | git (auto-commit + auto-push) | supabase (database)
+filesystem | git (auto-commit + auto-push)
 ```
 
 **Key principle**: The CLI never calls any LLM API. It is a pure storage tool with pluggable backends.
@@ -50,7 +50,6 @@ This gives you two commands: `wiki` (primary, 4 chars) and `llmwiki` (fallback i
 |---------|-------------|------|
 | `filesystem` (default) | Plain markdown files on disk | `wiki init my-wiki` |
 | `git` | Filesystem + auto-commit + auto-push to GitHub | `wiki init my-wiki --backend git --git-token <pat>` |
-| `supabase` | Pages in a Supabase database table | `wiki init my-wiki --backend supabase --supabase-url <url> --supabase-key <key>` |
 
 ## Quick Start
 
@@ -108,15 +107,7 @@ my-wiki/
     └── synthesis/         # Cross-cutting analysis
 ```
 
-For supabase backend, only `.llmwiki.yaml` is created locally. Pages are stored in the `wiki_pages` database table.
-
-**Schema and init:** `wiki init --backend supabase` runs a quick check against `wiki_pages` (required columns, `upsert` on `user_id,wiki_id,path` with nullable `user_id`). If the table is missing or incompatible, the CLI prints **ready-to-run SQL** for PostgreSQL **15+** (`unique nulls not distinct` on `user_id, wiki_id, path`). Apply it in the Supabase SQL Editor, then run `wiki init` again. If initial seed writes still fail with a schema-style error, the same SQL is printed again as a hint.
-
-**`user_id`:** Optional. `NULL` means a single shared partition (works well with the **service role** key for personal tooling). When set, the row is scoped to that auth user. The trigger fills `user_id` from `auth.uid()` when the client leaves it null and a user session exists.
-
-**RLS and auth:** Policies allow the `authenticated` role to read and write rows where `user_id is null or auth.uid() = user_id`. Use the **anon** key in `.llmwiki.yaml` plus a **Supabase Auth access token** (JWT) per session: `LLMWIKI_SUPABASE_ACCESS_TOKEN`, or optional `supabase.access_token` in config (avoid committing secrets). The **service role** key bypasses RLS; do not rely on it for multi-tenant isolation. Older layouts (for example `(wiki_id, path)` only, or non-null `user_id` without the right unique constraint) need a migration or `drop table public.wiki_pages cascade` before applying the printed SQL.
-
-**Storage profiles (all backends):** `wiki profile use <slug>`, `--profile`, `LLMWIKI_PROFILE`, or top-level `profile` in `.llmwiki.yaml` (legacy: `supabase.profile`). For **filesystem** and **git**, pages live under `profiles/<slug>/` inside the wiki repo. For **Supabase**, the same slug selects the composite `wiki_id`. This is organizational separation only, not OS or cryptographic isolation.
+**Storage profiles:** `wiki profile use <slug>`, `--profile`, `LLMWIKI_PROFILE`, or top-level `profile` in `.llmwiki.yaml`. Pages live under `profiles/<slug>/` inside the wiki directory. This is organizational separation only, not OS or cryptographic isolation.
 
 ## Commands
 
@@ -125,12 +116,11 @@ For supabase backend, only `.llmwiki.yaml` is created locally. Pages are stored 
 wiki init [dir] --name <name> --domain <domain> --backend <type>
 wiki init [dir] --backend git --git-token <pat> [--git-repo owner/repo]
 wiki init [dir] --backend git --no-viz              # Skip visualization scaffolding
-wiki init [dir] --backend supabase --supabase-url <url> --supabase-key <key>
 wiki init [existing-wiki-dir] --viz                 # Add visualization to existing git wiki
 wiki registry                                       # List all wikis
 wiki use [wiki-id]                                  # Set active wiki
-wiki profile show                                   # Effective storage root / Supabase wiki_id
-wiki profile use <slug>                             # Save profile in registry (all backends)
+wiki profile show                                   # Effective storage root and profile
+wiki profile use <slug>                             # Save profile in registry
 wiki profile clear                                  # Remove saved profile
 ```
 
@@ -247,7 +237,6 @@ wiki search "neural networks" --all       # search across all wikis
 
 - Node.js >= 18 (or Bun)
 - Git (for `--backend git` only)
-- `@supabase/supabase-js` (for `--backend supabase` only — optional dependency)
 
 ## Development
 

@@ -1,9 +1,8 @@
 import { describe, it, expect } from "bun:test";
 import {
   validateProfileSlug,
-  compositeSupabaseWikiId,
   resolveStorageProfile,
-} from "../src/lib/supabase-profile.ts";
+} from "../src/lib/profile.ts";
 
 describe("validateProfileSlug", () => {
   it("accepts valid slugs", () => {
@@ -15,12 +14,6 @@ describe("validateProfileSlug", () => {
     expect(() => validateProfileSlug("")).toThrow(/Invalid storage profile/);
     expect(() => validateProfileSlug("a:b")).toThrow(/Invalid storage profile/);
     expect(() => validateProfileSlug("son@home")).toThrow(/Invalid storage profile/);
-  });
-});
-
-describe("compositeSupabaseWikiId", () => {
-  it("joins name and profile with colon", () => {
-    expect(compositeSupabaseWikiId("family", "dad")).toBe("family:dad");
   });
 });
 
