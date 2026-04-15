@@ -2,6 +2,17 @@
 
 <!-- New entries are prepended automatically by the publish workflow -->
 
+## v0.2.3 — 2026-04-15
+
+### Changes
+
+- Refactor storage backend: Remove Supabase support and related code (cf0bf05)
+
+**Full diff:** [v0.2.2...v0.2.3](https://github.com/doum1004/llmwiki-cli/compare/v0.2.2...v0.2.3)
+
+---
+
+
 ## v0.2.2 — 2026-04-13
 
 ### Changes
