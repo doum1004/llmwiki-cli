@@ -2,6 +2,7 @@
 
 [![npm version](https://img.shields.io/npm/v/llmwiki-cli?style=flat-square&color=cb3837&logo=npm)](https://www.npmjs.com/package/llmwiki-cli)
 ![total downloads](https://img.shields.io/npm/dt/llmwiki-cli)
+![Visitors](https://visitor-badge.laobi.icu/badge?page_id=doum1004.llmwiki-cli)
 [![CI](https://img.shields.io/github/actions/workflow/status/doum1004/llmwiki-cli/ci.yml?branch=main&style=flat-square&label=CI&logo=github)](https://github.com/doum1004/llmwiki-cli/actions/workflows/ci.yml)
 [![license](https://img.shields.io/npm/l/llmwiki-cli?style=flat-square&color=blue)](./LICENSE)
 [![bun](https://img.shields.io/badge/built%20with-bun-f9f1e1?style=flat-square&logo=bun)](https://bun.sh)
@@ -249,9 +250,9 @@ bun run build       # bundle to dist/wiki.js
 bun run dev -- --help
 ```
 
-## DATA
+## Star History
 
-![Visitors](https://visitor-badge.laobi.icu/badge?page_id=doum1004.llmwiki-cli)
+[![Star History Chart](https://api.star-history.com/svg?repos=doum1004/llmwiki-cli&type=Date)](https://star-history.com/#doum1004/llmwiki-cli&Date)
 
 ## License
 
