@@ -75,6 +75,12 @@ wiki read <path>                                    # Print page to stdout
 wiki write <path> <<'EOF'                           # Write page (create/overwrite)
 content here
 EOF
+wiki write <path> --from-frontmatter [--log-type T] <<'EOF'   # Same + index (and optional log from YAML title)
+---
+title: Page Title
+---
+body
+EOF
 wiki append <path> <<'EOF'                          # Append to page
 additional content
 EOF
@@ -86,9 +92,9 @@ wiki search <query> [--limit N] [--all] [--json]    # Search pages
 \`\`\`bash
 wiki index show                                     # Print master index
 wiki index add <path> <summary>                     # Add entry to index
-wiki index remove <path>                            # Remove entry from index
+wiki index remove <path>                            # Remove entry from index (no write shortcut)
 wiki log show [--last N] [--type T]                 # Print log entries
-wiki log append <type> <message>                    # Append log entry
+wiki log append <type> <message>                    # Append log entry (e.g. query/maintenance without a new page)
 \`\`\`
 
 ### Version control and visualization (optional)
@@ -112,9 +118,8 @@ When ingesting a new source:
 3. Extract entities → create/update pages in \`wiki/entities/\`
 4. Extract concepts → create/update pages in \`wiki/concepts/\`
 5. If cross-cutting insights emerge → create \`wiki/synthesis/\` pages
-6. Update \`wiki/index.md\` with new entries
-7. Append to \`wiki/log.md\` with ingest activity
-8. Version changes with Git or another tool outside the CLI if you need history
+6. Update \`wiki/index.md\` and \`wiki/log.md\` — **prefer** \`wiki write <path> --from-frontmatter\` (and optional \`--log-type\`) on each new page that has YAML \`title\`, so index/log stay in sync with the file write. Otherwise use \`wiki index add\` / \`wiki log append\`, or \`wiki index remove\` / \`wiki log append\` when there is no new page (queries, maintenance).
+7. Version changes with Git or another tool outside the CLI if you need history
 
 ## Query Workflow
 
@@ -140,8 +145,8 @@ Periodically check wiki health:
 
 1. File names use kebab-case: \`my-topic-name.md\`
 2. One topic per file. Split large topics into sub-topics.
-3. Always update index.md when adding/removing pages.
-4. Always append to log.md when making changes.
+3. Always update index.md when adding/removing pages (often via \`wiki write --from-frontmatter\` or \`wiki index add\` / \`wiki index remove\`).
+4. Always append to log.md when making changes (\`wiki write\` flags or \`wiki log append\`).
 5. Use [[wikilinks]] to connect related pages.
 6. Prefer concrete examples over abstract descriptions.
 7. Include the source of knowledge when possible.

@@ -8,6 +8,8 @@ A CLI tool that helps LLM agents (Claude Code, Codex, etc.) build and maintain p
 
 **Key principle: The CLI never calls any LLM API. It is a pure filesystem tool: markdown under the wiki root via `StorageProvider` / `WikiManager`.**
 
+**Index and log:** Prefer `wiki write … --from-frontmatter` when creating pages that already have YAML `title`. Keep `wiki index` / `wiki log` for `index remove`, `show`, `log append` without writing a page, and other cases called out in `wiki skill`.
+
 ## Tech stack
 
 - **Runtime:** Bun (development), Node.js (published bundle)
@@ -85,7 +87,7 @@ wiki profile show | use <slug> | clear   # Storage profile under profiles/<slug>
 
 ```
 wiki read <path>
-wiki write <path>                   # stdin → page
+wiki write <path> [--index-summary <s>] [--log-type <t> [--log-message <m>]] [--from-frontmatter]  # stdin → page; optional index + log; YAML title fills gaps when flag set
 wiki append <path>                 # stdin appended
 wiki list [dir] [--tree] [--json]
 wiki search <query> [--limit N] [--all] [--json]

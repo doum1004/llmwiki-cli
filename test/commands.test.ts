@@ -78,6 +78,159 @@ describe("write and read commands", () => {
     const result = await runWiki(["-w", "testwiki", "read", "nonexistent.md"]);
     expect(result.exitCode).toBe(1);
   });
+
+  it("write with --index-summary and --log-type/--log-message updates index and log", async () => {
+    await initWiki();
+    const body = "---\ntitle: Attention\ncreated: 2025-01-20\n---\nBody.";
+    const result = await runWiki(
+      [
+        "-w",
+        "testwiki",
+        "write",
+        "wiki/concepts/attention.md",
+        "--index-summary",
+        "Overview of attention",
+        "--log-type",
+        "ingest",
+        "--log-message",
+        "Attention page",
+      ],
+      body,
+    );
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("wrote wiki/concepts/attention.md");
+    expect(result.stdout).toContain("Added to index:");
+    expect(result.stdout).toContain("Logged: ingest | Attention page");
+
+    const index = await runWiki(["-w", "testwiki", "index", "show"]);
+    expect(index.stdout).toContain("[[wiki/concepts/attention.md]]");
+    expect(index.stdout).toContain("Overview of attention");
+
+    const log = await runWiki(["-w", "testwiki", "log", "show", "--last", "1"]);
+    expect(log.stdout).toContain("ingest | Attention page");
+  });
+
+  it("write rejects --log-type without --log-message", async () => {
+    await initWiki();
+    const result = await runWiki(
+      ["-w", "testwiki", "write", "wiki/concepts/x.md", "--log-type", "ingest"],
+      "# hi\n",
+    );
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("--log-message with --log-type");
+  });
+
+  it("write rejects --log-message without --log-type", async () => {
+    await initWiki();
+    const result = await runWiki(
+      [
+        "-w",
+        "testwiki",
+        "write",
+        "wiki/concepts/x.md",
+        "--log-message",
+        "only message",
+      ],
+      "# hi\n",
+    );
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("--log-type and --log-message");
+  });
+
+  it("write rejects whitespace-only --index-summary", async () => {
+    await initWiki();
+    const result = await runWiki(
+      [
+        "-w",
+        "testwiki",
+        "write",
+        "wiki/concepts/x.md",
+        "--index-summary",
+        "   ",
+      ],
+      "# hi\n",
+    );
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("--index-summary cannot be empty");
+  });
+
+  it("write --from-frontmatter uses YAML title for index when --index-summary omitted", async () => {
+    await initWiki();
+    const body =
+      "---\ntitle: Attention Mechanism\ncreated: 2025-01-20\ntags: [transformers, NLP]\n---\nBody.";
+    const result = await runWiki(
+      [
+        "-w",
+        "testwiki",
+        "write",
+        "wiki/concepts/attention.md",
+        "--from-frontmatter",
+      ],
+      body,
+    );
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("Added to index:");
+    const index = await runWiki(["-w", "testwiki", "index", "show"]);
+    expect(index.stdout).toContain("[[wiki/concepts/attention.md]]");
+    expect(index.stdout).toContain("Attention Mechanism");
+  });
+
+  it("write --from-frontmatter uses title for log message when --log-type without --log-message", async () => {
+    await initWiki();
+    const body = "---\ntitle: My Page\n---\nHi.";
+    const result = await runWiki(
+      [
+        "-w",
+        "testwiki",
+        "write",
+        "wiki/concepts/p.md",
+        "--from-frontmatter",
+        "--log-type",
+        "ingest",
+      ],
+      body,
+    );
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("Logged: ingest | My Page");
+  });
+
+  it("write --from-frontmatter explicit --index-summary and --log-message override title", async () => {
+    await initWiki();
+    const body = "---\ntitle: YAML Title\n---\nX.";
+    const result = await runWiki(
+      [
+        "-w",
+        "testwiki",
+        "write",
+        "wiki/concepts/o.md",
+        "--from-frontmatter",
+        "--index-summary",
+        "CLI summary line",
+        "--log-type",
+        "ingest",
+        "--log-message",
+        "CLI log line",
+      ],
+      body,
+    );
+    expect(result.exitCode).toBe(0);
+    const index = await runWiki(["-w", "testwiki", "index", "show"]);
+    expect(index.stdout).toContain("CLI summary line");
+    expect(index.stdout).not.toContain("YAML Title");
+    const log = await runWiki(["-w", "testwiki", "log", "show", "--last", "1"]);
+    expect(log.stdout).toContain("ingest | CLI log line");
+    expect(log.stdout).not.toContain("YAML Title");
+  });
+
+  it("write --from-frontmatter fails when title missing and index would come from frontmatter", async () => {
+    await initWiki();
+    const result = await runWiki(
+      ["-w", "testwiki", "write", "wiki/concepts/n.md", "--from-frontmatter"],
+      "# No frontmatter title\n",
+    );
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("--from-frontmatter requires");
+  });
 });
 
 // --- append ---

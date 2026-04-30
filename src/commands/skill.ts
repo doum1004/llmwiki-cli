@@ -82,16 +82,22 @@ wiki/                 # LLM-generated pages (all knowledge lives here)
 
 ## Workflows
 
+### Index and log: \`wiki write\` flags vs dedicated commands
+
+- **Default for new wiki pages with YAML frontmatter:** \`wiki write <path> --from-frontmatter\` plus optional \`--log-type …\` (omit \`--log-message\` to use \`title\` in the log). One invocation writes the file and updates \`wiki/index.md\` / \`wiki/log.md\` when you opt in.
+- **Keep \`wiki index\` and \`wiki log\`:** they are not redundant. Use them for \`index remove\`, \`index show\` / \`log show\`, \`index add\` without rewriting a page, \`log append\` when **no** page body is written (queries, maintenance), raw \`raw/\` drops without frontmatter, or summaries that must differ from \`title\`.
+
 ### Ingest a source
 
 \`\`\`bash
-# 1. Save raw source (immutable)
+# 1. Save raw source (immutable) — usually no index/log hook here
 wiki write raw/attention-paper.md <<'EOF'
 <full text of paper>
 EOF
 
-# 2. Create structured summary page
-wiki write wiki/sources/attention-paper.md <<'EOF'
+# 2. Structured summary: index + log from YAML title (\`--log-type\` alone reuses title as log message)
+wiki write wiki/sources/attention-paper.md \\
+  --from-frontmatter --log-type ingest <<'EOF'
 ---
 title: Attention Is All You Need
 created: 2025-01-20
@@ -102,8 +108,9 @@ Summary of the attention paper...
 See [[transformers]] and [[self-attention]].
 EOF
 
-# 3. Create/update entity and concept pages as needed
-wiki write wiki/concepts/transformers.md <<'EOF'
+# 3. Concept page (same pattern)
+wiki write wiki/concepts/transformers.md \\
+  --from-frontmatter --log-type ingest <<'EOF'
 ---
 title: Transformers
 created: 2025-01-20
@@ -111,11 +118,23 @@ tags: [architecture, deep-learning]
 ---
 The Transformer architecture...
 EOF
+\`\`\`
 
-# 4. Update bookkeeping
-wiki index add "sources/attention-paper.md" "Attention Is All You Need (2017)"
-wiki index add "concepts/transformers.md" "Transformer architecture overview"
-wiki log append ingest "Attention paper and transformer concepts"
+**One shared ingest log line** after several pages: use a single \`wiki log append ingest "…"\` and skip \`--log-type\` on intermediate \`wiki write\` calls (or use \`--from-frontmatter\` without \`--log-type\` for index-only on those pages).
+
+**Explicit summaries** that differ from \`title\`: use \`--index-summary\` / \`--log-message\`, or plain \`wiki write\` followed by \`wiki index add\` / \`wiki log append\`:
+
+\`\`\`bash
+wiki write wiki/concepts/transformers.md \\
+  --index-summary "Transformer architecture overview" \\
+  --log-type ingest --log-message "Attention paper and transformer concepts" <<'EOF'
+---
+title: Transformers
+created: 2025-01-20
+tags: [architecture, deep-learning]
+---
+The Transformer architecture...
+EOF
 \`\`\`
 
 ### Answer a question using the wiki
@@ -174,7 +193,7 @@ wiki search "neural networks" --all  # search across all wikis
 | Command | Description |
 |---------|-------------|
 | \`wiki read <path>\` | Print page content to stdout |
-| \`wiki write <path>\` | Write stdin to page (create or overwrite) |
+| \`wiki write <path>\` | Write stdin to page (create or overwrite); optional \`--index-summary\`, \`--log-type\` + \`--log-message\`, \`--from-frontmatter\` (YAML \`title\` fills omitted index/log text) |
 | \`wiki append <path>\` | Append stdin to existing page |
 | \`wiki list [dir] [--tree] [--json]\` | List pages (optionally as tree or JSON) |
 | \`wiki search <query> [-l N] [--all] [--json]\` | Full-text search with ranking |
@@ -184,10 +203,10 @@ wiki search "neural networks" --all  # search across all wikis
 | Command | Description |
 |---------|-------------|
 | \`wiki index show\` | Print master index |
-| \`wiki index add <path> <summary>\` | Add entry to index |
-| \`wiki index remove <path>\` | Remove entry from index |
+| \`wiki index add <path> <summary>\` | Add entry to index (also covered by \`wiki write\` flags when creating a page) |
+| \`wiki index remove <path>\` | Remove entry from index (no \`write\` equivalent) |
 | \`wiki log show [--last N] [--type T]\` | Print log entries (filter by count/type) |
-| \`wiki log append <type> <message>\` | Append log entry (types: ingest, query, maintenance, etc.) |
+| \`wiki log append <type> <message>\` | Append log entry — use for query/maintenance and any log line **without** a page write |
 
 ### Health & Links
 
@@ -203,7 +222,7 @@ wiki search "neural networks" --all  # search across all wikis
 
 1. **Always use heredoc for write/append** — these commands read stdin, not arguments. Running \`wiki write path.md "content"\` will hang waiting for stdin.
 
-2. **Always update index + log** — after creating or modifying pages, call \`wiki index add\` and \`wiki log append\`. The \`wiki lint\` command checks for pages missing from the index.
+2. **Always update index + log** — for new pages with frontmatter, prefer \`wiki write … --from-frontmatter\` (and optional \`--log-type\`). Use \`wiki index\` / \`wiki log\` for \`index remove\`, read-only \`show\`, \`log append\` without a page write, or when summaries must differ from \`title\`. The \`wiki lint\` command checks for pages missing from the index.
 
 3. **append fails if page doesn't exist** — use \`wiki write\` to create new pages, \`wiki append\` only for existing ones.
 

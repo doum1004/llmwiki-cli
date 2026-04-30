@@ -23,8 +23,8 @@ LLM Agent (Claude Code / Codex)
 |
 | shells out to:
 |   $ wiki init my-wiki --name "Notes" --domain "machine learning"
-|   $ wiki write wiki/concepts/attention.md <<'EOF' ... EOF
-|   $ wiki index add "concepts/attention.md" "Overview of attention"
+|   $ wiki write wiki/concepts/attention.md --from-frontmatter --log-type ingest <<'EOF' ... EOF
+|   $ wiki index remove "concepts/old.md"   # when needed; see wiki skill
 |   $ wiki search "scaling laws"
 |   $ wiki lint
 |
@@ -50,8 +50,8 @@ This gives you two commands: `wiki` (primary, 4 chars) and `llmwiki` (fallback i
 # Create a new wiki
 wiki init my-wiki --name "My Notes" --domain "research"
 
-# Write a page
-wiki write wiki/concepts/attention.md <<'EOF'
+# Write a page and sync index + log from YAML title (recommended when you have frontmatter)
+wiki write wiki/concepts/attention.md --from-frontmatter --log-type ingest <<'EOF'
 ---
 title: Attention Mechanism
 created: 2025-01-20
@@ -61,9 +61,7 @@ The attention mechanism allows models to focus on relevant parts of the input.
 See also [[transformers]] and [[self-attention]].
 EOF
 
-# Add to index and log
-wiki index add "concepts/attention.md" "Overview of attention mechanisms"
-wiki log append ingest "Attention mechanism page"
+# Still use wiki index / wiki log for removals, show, log-only events (queries, maintenance), etc.
 
 # Search and lint
 wiki search "attention"
@@ -108,7 +106,7 @@ wiki profile clear                                  # Remove saved profile
 ### Reading & Writing
 ```bash
 wiki read <path>                                    # Print page to stdout
-wiki write <path>                                   # Write stdin to page
+wiki write <path> [--index-summary …] [--log-type … [--log-message …]] [--from-frontmatter]   # stdin; optional index + log; title from YAML when flag set
 wiki append <path>                                  # Append stdin to page
 wiki list [dir] [--tree] [--json]                   # List pages
 wiki search <query> [--limit N] [--all] [--json]    # Search pages
