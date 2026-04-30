@@ -2,6 +2,20 @@
 
 <!-- New entries are prepended automatically by the publish workflow -->
 
+## v0.3.1 — 2026-04-30
+
+### Changes
+
+- refactor: enhance wiki write command with index and log options (2eaafc0)
+- refactor: remove Git backend support and related code (4f07b6a)
+- Refactor wiki CLI structure and documentation (1a85663)
+- Update README with star history and visitor badge (799d069)
+
+**Full diff:** [v0.2.3...v0.3.1](https://github.com/doum1004/llmwiki-cli/compare/v0.2.3...v0.3.1)
+
+---
+
+
 ## v0.3.0 — 2026-04-30
 
 ### Breaking
