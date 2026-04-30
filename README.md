@@ -22,20 +22,17 @@ The CLI is the hands -- it reads, writes, searches, and manages wiki files. The 
 LLM Agent (Claude Code / Codex)
 |
 | shells out to:
-|   $ wiki init my-wiki --domain "machine learning"
+|   $ wiki init my-wiki --name "Notes" --domain "machine learning"
 |   $ wiki write wiki/concepts/attention.md <<'EOF' ... EOF
 |   $ wiki index add "concepts/attention.md" "Overview of attention"
 |   $ wiki search "scaling laws"
 |   $ wiki lint
 |
 v
-wiki CLI (StorageProvider abstraction)
-|
-v
-filesystem | git (auto-commit + auto-push)
+wiki CLI (StorageProvider → local markdown files)
 ```
 
-**Key principle**: The CLI never calls any LLM API. It is a pure storage tool with pluggable backends.
+**Key principle**: The CLI never calls any LLM API. It reads and writes markdown on disk only (no built-in Git sync or cloud backends).
 
 **AI assistants / coding agents:** Use [CLAUDE.md](CLAUDE.md) for instructions, rules, and technical context. This README stays oriented to people (overview, install, usage).
 
@@ -47,21 +44,11 @@ npm install -g llmwiki-cli
 
 This gives you two commands: `wiki` (primary, 4 chars) and `llmwiki` (fallback if `wiki` conflicts).
 
-## Storage Backends
-
-| Backend | Description | Init |
-|---------|-------------|------|
-| `filesystem` (default) | Plain markdown files on disk | `wiki init my-wiki` |
-| `git` | Filesystem + auto-commit + auto-push to GitHub | `wiki init my-wiki --backend git --git-token <pat>` |
-
 ## Quick Start
 
 ```bash
-# Create a new wiki (filesystem backend, default)
+# Create a new wiki
 wiki init my-wiki --name "My Notes" --domain "research"
-
-# Or with git + GitHub sync
-wiki init my-wiki --name "My Notes" --domain "research" --backend git --git-token ghp_xxx
 
 # Write a page
 wiki write wiki/concepts/attention.md <<'EOF'
@@ -85,20 +72,12 @@ wiki lint
 
 ## Wiki Structure
 
-When you run `wiki init` (filesystem or git backend), it creates:
+When you run `wiki init`, it creates:
 
 ```
 my-wiki/
-├── .git/                  # Only with --backend git
-├── .github/               # Only with --backend git (--viz)
-│   └── workflows/
-│       └── wiki-viz.yml   # GitHub Actions → GitHub Pages visualization
-├── .gitignore             # Only with --backend git (--viz)
-├── .llmwiki.yaml          # Wiki config (all backends)
+├── .llmwiki.yaml          # Wiki config
 ├── SCHEMA.md              # Instructions for LLM agents
-├── scripts/               # Only with --backend git (--viz)
-│   ├── build-graph.js     # Builds graph.json from wikilinks
-│   └── build-site.js      # Generates d3-force visualization
 ├── raw/                   # Immutable source documents
 │   └── assets/            # Downloaded images
 └── wiki/                  # LLM-generated pages
@@ -110,16 +89,15 @@ my-wiki/
     └── synthesis/         # Cross-cutting analysis
 ```
 
+Use normal Git in `my-wiki/` if you want version control. The CLI does not run `git init` for you.
+
 **Storage profiles:** `wiki profile use <slug>`, `--profile`, `LLMWIKI_PROFILE`, or top-level `profile` in `.llmwiki.yaml`. Pages live under `profiles/<slug>/` inside the wiki directory. This is organizational separation only, not OS or cryptographic isolation.
 
 ## Commands
 
 ### Wiki Management
 ```bash
-wiki init [dir] --name <name> --domain <domain> --backend <type>
-wiki init [dir] --backend git --git-token <pat> [--git-repo owner/repo]
-wiki init [dir] --backend git --no-viz              # Skip visualization scaffolding
-wiki init [existing-wiki-dir] --viz                 # Add visualization to existing git wiki
+wiki init [dir] --name <name> --domain <domain>      # Create wiki (local files only)
 wiki registry                                       # List all wikis
 wiki use [wiki-id]                                  # Set active wiki
 wiki profile show                                   # Effective storage root and profile
@@ -201,25 +179,18 @@ wiki orphans               # pages nobody links to
 wiki status                # overview stats
 ```
 
-## Git backend and GitHub
+## Optional: link graph on GitHub Pages
 
-- **New repo:** With `--git-token` and no `--git-repo`, the CLI creates **`wiki-<name>` as a public repository** (straightforward to try GitHub Pages). Use `--git-repo owner/existing` to target a repo you already manage.
-- **Token not committed:** `.llmwiki.yaml` stores **`git.repo` only**, not your PAT, so GitHub’s push secret scanning does not reject commits. For **`wiki write` / `wiki append`** (auto-push), set **`LLMWIKI_GIT_TOKEN`**, **`GITHUB_TOKEN`**, or **`GIT_TOKEN`** in your environment.
-- **PAT permissions:** The token must be allowed to update **GitHub Actions workflow** files (classic PAT: include the **`workflow`** scope; fine-grained: grant workflow/Actions write). Otherwise the first push after init can fail on `.github/workflows/wiki-viz.yml`.
+The CLI does **not** scaffold Git or Actions during `wiki init`. If you want the same interactive d3-force graph as the [live demo](https://doum1004.github.io/llmwiki-cli/):
 
-## Graph Visualization
+1. Initialize or clone a **git** repository at your wiki root (`git init`, add remote, etc.).
+2. Copy from **this repository** into your wiki root:
+   - `.github/workflows/wiki-viz.yml` — source string: `getVizWorkflow()` in [`src/lib/templates.ts`](src/lib/templates.ts)
+   - `scripts/build-graph.js` and `scripts/build-site.js` — `getBuildGraphScript()` / `getBuildSiteScript()` in the same file  
+   Maintainers can regenerate standalone copies with `bun scripts/generate-viz-scripts.ts [outDir]` (writes `build-graph.cjs` / `build-site.cjs`; rename to `.js` if you prefer).
+3. Commit and push. In the GitHub repo, enable **Pages** with source **GitHub Actions**.
 
-Git-backend wikis automatically include a GitHub Actions workflow that builds an interactive d3-force graph visualization of your wiki's link structure and deploys it to GitHub Pages.
-
-- **Auto-scaffolded**: `wiki init --backend git` creates `.github/workflows/wiki-viz.yml` and `scripts/` build scripts by default
-- **On every push**: GitHub Actions parses all `[[wikilinks]]`, builds a force-directed graph, and deploys to Pages
-- **Interactive**: color-coded nodes by directory, zoom/pan, click-to-highlight connections, hover tooltips
-- **Opt-out**: use `--no-viz` to skip visualization scaffolding
-- **Add to existing wiki**: re-run `wiki init <dir> --viz` on an existing git wiki to add visualization files
-
-After a successful first push, init also tries to enable **GitHub Pages** (build: GitHub Actions). You can still configure it under **Settings → Pages → Source: GitHub Actions** if needed.
-
-**Branch name:** New git wikis rename the default branch to **`main`** before the first push so the **`github-pages`** Actions environment (which often only allows `main`) accepts deployment. If you see *“Branch master is not allowed to deploy to github-pages”*, rename locally with `git branch -M main`, push `main`, and under **Settings → General** set the **default branch** to `main` (and optionally delete the old `master` branch on GitHub).
+The workflow parses `[[wikilinks]]` on each push and publishes the graph site.
 
 ## Multi-Wiki Support
 
@@ -239,7 +210,6 @@ wiki search "neural networks" --all       # search across all wikis
 ## Requirements
 
 - Node.js >= 18 (or Bun)
-- Git (for `--backend git` only)
 
 ## Development
 
@@ -247,7 +217,7 @@ wiki search "neural networks" --all       # search across all wikis
 git clone https://github.com/doum1004/llmwiki-cli
 cd llmwiki-cli
 bun install
-bun test            # 194 tests
+bun test            # run full test suite
 bun run build       # bundle to dist/index.js
 bun run dev -- --help
 ```

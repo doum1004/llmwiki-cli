@@ -1,19 +1,14 @@
-import type { WikiConfig, BackendType } from "../types.ts";
+import type { WikiConfig } from "../types.ts";
 
 export function getDefaultConfig(
   name: string,
   domain: string,
-  backend: BackendType = "filesystem",
-  options?: {
-    profile?: string;
-    git?: { token?: string; repo: string };
-  },
+  options?: { profile?: string },
 ): WikiConfig {
   const config: WikiConfig = {
     name,
     domain,
     created: new Date().toISOString(),
-    backend,
     paths: {
       raw: "raw",
       wiki: "wiki",
@@ -22,9 +17,6 @@ export function getDefaultConfig(
   };
   if (options?.profile !== undefined) {
     config.profile = options.profile;
-  }
-  if (options?.git) {
-    config.git = options.git;
   }
   return config;
 }
@@ -71,7 +63,7 @@ Page content here. Use [[wikilinks]] to connect pages.
 
 ### Wiki Management
 \`\`\`bash
-wiki init [dir] --name <name> --domain <domain> [--backend filesystem|git]  # Create new wiki
+wiki init [dir] --name <name> --domain <domain>      # Create new wiki (local files only)
 wiki registry                                       # List all wikis
 wiki use [wiki-id]                                  # Set active wiki
 wiki profile show | use <slug> | clear              # Storage profile under profiles/<slug>/
@@ -99,8 +91,8 @@ wiki log show [--last N] [--type T]                 # Print log entries
 wiki log append <type> <message>                    # Append log entry
 \`\`\`
 
-### Git backend
-With \`--backend git\`, \`wiki write\` and \`wiki append\` auto-commit and auto-push when \`git.repo\` and a token (\`LLMWIKI_GIT_TOKEN\`, \`GITHUB_TOKEN\`, or \`GIT_TOKEN\`) are configured. Use \`wiki init ... --backend git --git-token <pat>\` for GitHub setup.
+### Version control and visualization (optional)
+Use normal Git in your wiki directory if you want history and remotes. For an interactive link graph on GitHub Pages, copy the workflow and \`scripts/\` files from the llmwiki-cli repository (see project README: optional viz drop-in).
 
 ### Health & Links
 \`\`\`bash
@@ -122,7 +114,7 @@ When ingesting a new source:
 5. If cross-cutting insights emerge → create \`wiki/synthesis/\` pages
 6. Update \`wiki/index.md\` with new entries
 7. Append to \`wiki/log.md\` with ingest activity
-8. With git backend, each \`wiki write\`/\`wiki append\` is committed automatically; otherwise version locally with git as you prefer
+8. Version changes with Git or another tool outside the CLI if you need history
 
 ## Query Workflow
 
@@ -142,7 +134,7 @@ Periodically check wiki health:
 2. Fix broken links by creating missing pages or updating references
 3. Connect orphan pages by adding wikilinks from related pages
 4. Add frontmatter to pages missing it
-5. With git backend, fixes are committed when you \`wiki write\`/\`wiki append\`; log maintenance in \`wiki log append\` as usual
+5. Log maintenance in \`wiki log append\` as usual after fixes
 
 ## Conventions
 

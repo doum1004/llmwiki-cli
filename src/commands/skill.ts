@@ -3,20 +3,13 @@ import { Command } from "commander";
 /** Printed by `wiki skill`; canonical agent guide (README points here). Keep aligned with `src/index.ts` and `src/lib/templates.ts` SCHEMA. */
 const SKILL_GUIDE = `# llmwiki-cli — LLM Agent Skill Guide
 
-You are operating a wiki CLI that manages markdown knowledge bases. You are the brain (deciding what to create, connect, and update). The CLI is the hands (reading, writing, searching, and syncing files). The CLI never calls any LLM API — it is a pure storage tool.
+You are operating a wiki CLI that manages markdown knowledge bases. You are the brain (deciding what to create, connect, and update). The CLI is the hands (reading, writing, searching, and managing files). The CLI never calls any LLM API — it is a pure filesystem tool.
 
-## Storage Backends
+## Storage
 
-The CLI supports two storage backends:
-
-| Backend | Description | Init |
-|---------|-------------|------|
-| \`filesystem\` (default) | Plain markdown files on disk, no versioning | \`wiki init my-wiki\` |
-| \`git\` | Filesystem + auto-commit + auto-push to GitHub | \`wiki init my-wiki --backend git --git-token <pat>\` |
-
-- **filesystem**: Simplest. Pages are \`.md\` files. No versioning.
-- **git**: Every \`wiki write\` and \`wiki append\` auto-commits and auto-pushes. Init with \`--git-token\` can auto-create a **public** \`wiki-<name>\` repo; the PAT is **not** saved in \`.llmwiki.yaml\` (use \`LLMWIKI_GIT_TOKEN\`, \`GITHUB_TOKEN\`, or \`GIT_TOKEN\` for later pushes). PAT needs **\`workflow\`** scope (or fine-grained equivalent) to push \`.github/workflows/wiki-viz.yml\`. Omit \`--git-token\` for local-only git.
+- **Local files**: Pages are \`.md\` files under the wiki root. \`wiki init\` creates the directory layout and \`.llmwiki.yaml\`; there is no built-in Git or cloud sync.
 - **Profiles:** \`wiki profile use <slug>\`, \`--profile\`, \`LLMWIKI_PROFILE\`, or \`profile\` in \`.llmwiki.yaml\` choose a namespace. Files are stored under \`profiles/<slug>/\` in the wiki directory. Not a security boundary on shared disks.
+- **Git / visualization (optional):** Use normal \`git init\` in the wiki root if you want version control. For an interactive link graph on GitHub Pages, copy the workflow and \`scripts/\` from the llmwiki-cli repo (see README: optional viz drop-in).
 
 ## Critical Patterns
 
@@ -76,12 +69,6 @@ Page content here. Use [[wikilinks]] to connect pages.
 ### Directory structure
 
 \`\`\`
-.github/              # Only with --backend git (--viz, default)
-  workflows/
-    wiki-viz.yml      # GitHub Actions → GitHub Pages visualization
-scripts/              # Only with --backend git (--viz, default)
-  build-graph.js      # Builds graph.json from wikilinks
-  build-site.js       # Generates d3-force interactive graph
 raw/                  # Immutable source documents (paste originals here)
   assets/             # Downloaded images and files
 wiki/                 # LLM-generated pages (all knowledge lives here)
@@ -129,8 +116,6 @@ EOF
 wiki index add "sources/attention-paper.md" "Attention Is All You Need (2017)"
 wiki index add "concepts/transformers.md" "Transformer architecture overview"
 wiki log append ingest "Attention paper and transformer concepts"
-
-# Done — git backend auto-commits on write
 \`\`\`
 
 ### Answer a question using the wiki
@@ -161,7 +146,6 @@ wiki orphans                         # pages nobody links to
 wiki status                          # overview stats
 
 # 3. Fix issues: add frontmatter, create missing pages, connect orphans
-# 4. Log fixes (git backend auto-commits on write)
 wiki log append maintenance "Fixed broken links and orphan pages"
 \`\`\`
 
@@ -180,10 +164,7 @@ wiki search "neural networks" --all  # search across all wikis
 
 | Command | Description |
 |---------|-------------|
-| \`wiki init [dir] --name <n> --domain <d> --backend <type>\` | Create new wiki (backends: filesystem, git) |
-| \`wiki init [dir] --backend git --git-token <pat> [--git-repo owner/repo]\` | Create git-backed wiki with GitHub sync + visualization |
-| \`wiki init [dir] --backend git --no-viz\` | Create git-backed wiki without visualization |
-| \`wiki init [existing-dir] --viz\` | Add visualization to existing git wiki |
+| \`wiki init [dir] --name <n> --domain <d>\` | Create new wiki (local markdown only) |
 | \`wiki registry\` | List all registered wikis |
 | \`wiki use [wiki-id]\` | List wikis or set active wiki |
 | \`wiki profile show | use <slug> | clear\` | Storage profile: uses \`profiles/<slug>/\` subdirectory; \`--profile\` / \`LLMWIKI_PROFILE\` override |
@@ -216,7 +197,7 @@ wiki search "neural networks" --all  # search across all wikis
 | \`wiki links <path>\` | Show outbound + inbound links for a page |
 | \`wiki backlinks <path>\` | Show inbound links only |
 | \`wiki orphans\` | List pages with no inbound links |
-| \`wiki status [--json]\` | Wiki overview: page counts, link stats, recent activity, git info |
+| \`wiki status [--json]\` | Wiki overview: page counts, link stats, recent activity |
 
 ## Gotchas
 
@@ -232,7 +213,7 @@ wiki search "neural networks" --all  # search across all wikis
 
 6. **lint checks five things**: broken wikilinks, orphan pages, missing frontmatter, empty pages, and index consistency (pages not in index, index entries pointing to missing pages).
 
-7. **GitHub Pages visualization** — git-backend wikis include a GitHub Actions workflow that builds an interactive graph on every push. Enable Pages in repo settings (Settings > Pages > Source: GitHub Actions). Use \`--no-viz\` at init to skip, or re-run \`wiki init <dir> --viz\` to add it later.`;
+7. **Re-running init** — if a directory already has \`.llmwiki.yaml\`, \`wiki init\` exits with an error. Choose a new directory or remove the existing config first.`;
 
 export function makeSkillCommand(): Command {
   return new Command("skill")

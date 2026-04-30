@@ -32,8 +32,8 @@ async function runWiki(args: string[], input?: string): Promise<{ stdout: string
   return { stdout, stderr, exitCode };
 }
 
-async function initWiki(name = "testwiki", backend = "filesystem"): Promise<void> {
-  const result = await runWiki(["init", wikiDir, "--name", name, "--domain", "test", "--backend", backend]);
+async function initWiki(name = "testwiki"): Promise<void> {
+  const result = await runWiki(["init", wikiDir, "--name", name, "--domain", "test"]);
   if (result.exitCode !== 0) {
     throw new Error(`Init failed: ${result.stderr}`);
   }
@@ -284,7 +284,7 @@ describe("status command", () => {
     expect(data.domain).toBe("test");
     expect(data.pages).toHaveProperty("total");
     expect(data.links).toHaveProperty("total");
-    expect(data.git).toHaveProperty("commits");
+    expect(data.recentActivity).toBeDefined();
   });
 });
 

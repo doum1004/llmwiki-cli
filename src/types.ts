@@ -1,5 +1,3 @@
-export type BackendType = "filesystem" | "git";
-
 export interface StorageProvider {
   readPage(relativePath: string): Promise<string | null>;
   writePage(relativePath: string, content: string): Promise<void>;
@@ -12,14 +10,8 @@ export interface WikiConfig {
   name: string;
   domain: string;
   created: string;
-  backend?: BackendType;
-  /** Optional storage profile: filesystem/git subdirectory `profiles/<slug>/`. */
+  /** Optional storage profile: subdirectory `profiles/<slug>/` for page I/O. */
   profile?: string;
-  git?: {
-    /** Prefer `LLMWIKI_GIT_TOKEN` or `GITHUB_TOKEN`; optional legacy field in YAML. */
-    token?: string;
-    repo: string;
-  };
   paths: {
     raw: string;
     wiki: string;
@@ -56,7 +48,7 @@ export interface WikiContext extends ResolvedWiki {
   storageScope: {
     profile: string | undefined;
     source: StorageProfileSource;
-    /** Directory used for filesystem/git page I/O (under `profiles/<slug>` when profile is set). */
+    /** Directory used for page I/O (under `profiles/<slug>` when profile is set). */
     effectiveRoot: string;
   };
 }

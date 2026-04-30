@@ -408,33 +408,30 @@ describe("init command (integration)", () => {
     expect(await Bun.file(join(wikiDir, "wiki/index.md")).exists()).toBe(true);
     expect(await Bun.file(join(wikiDir, "wiki/log.md")).exists()).toBe(true);
 
-    // Filesystem backend should NOT have .git
+    // Init must not create a .git directory
     let hasGit = true;
     try { await stat(join(wikiDir, ".git")); } catch { hasGit = false; }
     expect(hasGit).toBe(false);
   });
 
-  it("creates git repo with --backend git", async () => {
-    const wikiDir = join(testDir, "gitwiki");
-    const proc = Bun.spawn(
-      ["bun", "run", "src/index.ts", "init", wikiDir, "--name", "gitwiki", "--backend", "git"],
-      {
-        cwd: process.cwd(),
-        stdout: "pipe",
-        stderr: "pipe",
-        env: {
-          ...process.env,
-          GIT_AUTHOR_NAME: "Test",
-          GIT_AUTHOR_EMAIL: "test@test.com",
-          GIT_COMMITTER_NAME: "Test",
-          GIT_COMMITTER_EMAIL: "test@test.com",
-        },
-      },
+  it("fails when wiki already exists", async () => {
+    const wikiDir = join(testDir, "dupwiki");
+    const env = { ...process.env, LLMWIKI_CONFIG_DIR: configDir };
+    const proc1 = Bun.spawn(
+      ["bun", "run", "src/index.ts", "init", wikiDir, "--name", "dupwiki"],
+      { cwd: process.cwd(), stdout: "pipe", stderr: "pipe", env },
     );
-    await proc.exited;
+    await proc1.exited;
+    expect(proc1.exitCode).toBe(0);
 
-    const gitStat = await stat(join(wikiDir, ".git"));
-    expect(gitStat.isDirectory()).toBe(true);
+    const proc2 = Bun.spawn(
+      ["bun", "run", "src/index.ts", "init", wikiDir, "--name", "dupwiki2"],
+      { cwd: process.cwd(), stdout: "pipe", stderr: "pipe", env },
+    );
+    await proc2.exited;
+    expect(proc2.exitCode).toBe(1);
+    const err = await new Response(proc2.stderr).text();
+    expect(err).toContain("already exists");
   });
 
   it("registers wiki in global registry", async () => {
@@ -473,68 +470,11 @@ describe("init command (integration)", () => {
   });
 });
 
-// --- viz scaffolding ---
-
-describe("viz scaffolding", () => {
-  it("scaffolds viz files with --backend git by default", async () => {
-    const wikiDir = join(testDir, "vizwiki");
+describe("init does not scaffold viz or git", () => {
+  it("creates only wiki layout without .github or scripts", async () => {
+    const wikiDir = join(testDir, "plainwiki");
     const proc = Bun.spawn(
-      ["bun", "run", "src/index.ts", "init", wikiDir, "--name", "vizwiki", "--backend", "git"],
-      {
-        cwd: process.cwd(),
-        stdout: "pipe",
-        stderr: "pipe",
-        env: {
-          ...process.env,
-          LLMWIKI_CONFIG_DIR: configDir,
-          GIT_AUTHOR_NAME: "Test",
-          GIT_AUTHOR_EMAIL: "test@test.com",
-          GIT_COMMITTER_NAME: "Test",
-          GIT_COMMITTER_EMAIL: "test@test.com",
-        },
-      },
-    );
-    await proc.exited;
-
-    expect(await Bun.file(join(wikiDir, ".github/workflows/wiki-viz.yml")).exists()).toBe(true);
-    expect(await Bun.file(join(wikiDir, "scripts/build-graph.js")).exists()).toBe(true);
-    expect(await Bun.file(join(wikiDir, "scripts/build-site.js")).exists()).toBe(true);
-    expect(await Bun.file(join(wikiDir, ".gitignore")).exists()).toBe(true);
-  });
-
-  it("skips viz files with --no-viz", async () => {
-    const wikiDir = join(testDir, "novizwiki");
-    const proc = Bun.spawn(
-      ["bun", "run", "src/index.ts", "init", wikiDir, "--name", "novizwiki", "--backend", "git", "--no-viz"],
-      {
-        cwd: process.cwd(),
-        stdout: "pipe",
-        stderr: "pipe",
-        env: {
-          ...process.env,
-          LLMWIKI_CONFIG_DIR: configDir,
-          GIT_AUTHOR_NAME: "Test",
-          GIT_AUTHOR_EMAIL: "test@test.com",
-          GIT_COMMITTER_NAME: "Test",
-          GIT_COMMITTER_EMAIL: "test@test.com",
-        },
-      },
-    );
-    await proc.exited;
-
-    let hasWorkflow = true;
-    try { await stat(join(wikiDir, ".github/workflows/wiki-viz.yml")); } catch { hasWorkflow = false; }
-    expect(hasWorkflow).toBe(false);
-
-    let hasScripts = true;
-    try { await stat(join(wikiDir, "scripts")); } catch { hasScripts = false; }
-    expect(hasScripts).toBe(false);
-  });
-
-  it("does not scaffold viz for filesystem backend", async () => {
-    const wikiDir = join(testDir, "fswiki");
-    const proc = Bun.spawn(
-      ["bun", "run", "src/index.ts", "init", wikiDir, "--name", "fswiki"],
+      ["bun", "run", "src/index.ts", "init", wikiDir, "--name", "plainwiki"],
       {
         cwd: process.cwd(),
         stdout: "pipe",
@@ -545,88 +485,27 @@ describe("viz scaffolding", () => {
     await proc.exited;
 
     let hasGithub = true;
-    try { await stat(join(wikiDir, ".github")); } catch { hasGithub = false; }
+    try {
+      await stat(join(wikiDir, ".github"));
+    } catch {
+      hasGithub = false;
+    }
     expect(hasGithub).toBe(false);
 
     let hasScripts = true;
-    try { await stat(join(wikiDir, "scripts")); } catch { hasScripts = false; }
+    try {
+      await stat(join(wikiDir, "scripts"));
+    } catch {
+      hasScripts = false;
+    }
     expect(hasScripts).toBe(false);
-  });
 
-  it("re-running init --viz on existing git wiki scaffolds viz files", async () => {
-    const wikiDir = join(testDir, "existingwiki");
-    const gitEnv = {
-      ...process.env,
-      LLMWIKI_CONFIG_DIR: configDir,
-      GIT_AUTHOR_NAME: "Test",
-      GIT_AUTHOR_EMAIL: "test@test.com",
-      GIT_COMMITTER_NAME: "Test",
-      GIT_COMMITTER_EMAIL: "test@test.com",
-    };
-    // First: init without viz
-    const proc1 = Bun.spawn(
-      ["bun", "run", "src/index.ts", "init", wikiDir, "--name", "existingwiki", "--backend", "git", "--no-viz"],
-      { cwd: process.cwd(), stdout: "pipe", stderr: "pipe", env: gitEnv },
-    );
-    await proc1.exited;
-
-    // Verify no viz files
-    let hasWorkflow = true;
-    try { await stat(join(wikiDir, ".github")); } catch { hasWorkflow = false; }
-    expect(hasWorkflow).toBe(false);
-
-    // Re-run with --viz
-    const proc2 = Bun.spawn(
-      ["bun", "run", "src/index.ts", "init", wikiDir, "--viz"],
-      { cwd: process.cwd(), stdout: "pipe", stderr: "pipe", env: gitEnv },
-    );
-    await proc2.exited;
-
-    // Now viz files should exist
-    expect(await Bun.file(join(wikiDir, ".github/workflows/wiki-viz.yml")).exists()).toBe(true);
-    expect(await Bun.file(join(wikiDir, "scripts/build-graph.js")).exists()).toBe(true);
-    expect(await Bun.file(join(wikiDir, "scripts/build-site.js")).exists()).toBe(true);
-
-    // Should be committed
-    const lsTree = Bun.spawn(
-      ["git", "ls-tree", "-r", "HEAD", "--name-only"],
-      { cwd: wikiDir, stdout: "pipe", stderr: "pipe" },
-    );
-    const output = await new Response(lsTree.stdout).text();
-    await lsTree.exited;
-    expect(output).toContain(".github/workflows/wiki-viz.yml");
-  });
-
-  it("viz files are included in initial git commit", async () => {
-    const wikiDir = join(testDir, "vizcommit");
-    const proc = Bun.spawn(
-      ["bun", "run", "src/index.ts", "init", wikiDir, "--name", "vizcommit", "--backend", "git"],
-      {
-        cwd: process.cwd(),
-        stdout: "pipe",
-        stderr: "pipe",
-        env: {
-          ...process.env,
-          LLMWIKI_CONFIG_DIR: configDir,
-          GIT_AUTHOR_NAME: "Test",
-          GIT_AUTHOR_EMAIL: "test@test.com",
-          GIT_COMMITTER_NAME: "Test",
-          GIT_COMMITTER_EMAIL: "test@test.com",
-        },
-      },
-    );
-    await proc.exited;
-
-    const lsTree = Bun.spawn(
-      ["git", "ls-tree", "-r", "HEAD", "--name-only"],
-      { cwd: wikiDir, stdout: "pipe", stderr: "pipe" },
-    );
-    const output = await new Response(lsTree.stdout).text();
-    await lsTree.exited;
-
-    expect(output).toContain(".github/workflows/wiki-viz.yml");
-    expect(output).toContain("scripts/build-graph.js");
-    expect(output).toContain("scripts/build-site.js");
-    expect(output).toContain(".gitignore");
+    let hasGit = true;
+    try {
+      await stat(join(wikiDir, ".git"));
+    } catch {
+      hasGit = false;
+    }
+    expect(hasGit).toBe(false);
   });
 });

@@ -1,0 +1,7 @@
+name: llmwiki-demo
+domain: documentation
+created: "2026-04-30T00:00:00.000Z"
+paths:
+  raw: raw
+  wiki: wiki
+  schema: SCHEMA.md

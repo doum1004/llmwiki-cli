@@ -2,6 +2,21 @@
 
 <!-- New entries are prepended automatically by the publish workflow -->
 
+## v0.3.0 — 2026-04-30
+
+### Breaking
+
+- Remove the **git storage backend** (`GitProvider`), GitHub API usage, and all `wiki init` flags for `--backend`, `--git-token`, `--git-repo`, `--viz`, and `--no-viz`. `wiki init` only creates local markdown layout; it exits with an error if `.llmwiki.yaml` already exists in the target directory.
+- Remove `backend` and `git` from `WikiConfig` (older YAML may still contain them; they are ignored).
+- Remove git-related libraries (`git.ts`, `github.ts`, `git-credentials.ts`, `git-provider.ts`) and their tests.
+- `wiki status` no longer includes a `git` field in JSON or human output.
+
+### Changes
+
+- README documents **optional GitHub Pages visualization** as a manual drop-in (copy workflow + scripts from this repo or regenerate via `scripts/generate-viz-scripts.ts`).
+
+---
+
 ## v0.2.3 — 2026-04-15
 
 ### Changes
@@ -11,7 +26,6 @@
 **Full diff:** [v0.2.2...v0.2.3](https://github.com/doum1004/llmwiki-cli/compare/v0.2.2...v0.2.3)
 
 ---
-
 
 ## v0.2.2 — 2026-04-13
 
