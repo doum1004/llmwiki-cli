@@ -384,7 +384,7 @@ describe("init command (integration)", () => {
   it("creates all directories and files (filesystem)", async () => {
     const wikiDir = join(testDir, "mywiki");
     const proc = Bun.spawn(
-      ["bun", "run", "bin/wiki.ts", "init", wikiDir, "--name", "mywiki", "--domain", "test"],
+      ["bun", "run", "src/index.ts", "init", wikiDir, "--name", "mywiki", "--domain", "test"],
       { cwd: process.cwd(), stdout: "pipe", stderr: "pipe" },
     );
     await proc.exited;
@@ -417,7 +417,7 @@ describe("init command (integration)", () => {
   it("creates git repo with --backend git", async () => {
     const wikiDir = join(testDir, "gitwiki");
     const proc = Bun.spawn(
-      ["bun", "run", "bin/wiki.ts", "init", wikiDir, "--name", "gitwiki", "--backend", "git"],
+      ["bun", "run", "src/index.ts", "init", wikiDir, "--name", "gitwiki", "--backend", "git"],
       {
         cwd: process.cwd(),
         stdout: "pipe",
@@ -440,7 +440,7 @@ describe("init command (integration)", () => {
   it("registers wiki in global registry", async () => {
     const wikiDir = join(testDir, "regwiki");
     const proc = Bun.spawn(
-      ["bun", "run", "bin/wiki.ts", "init", wikiDir, "--name", "regwiki"],
+      ["bun", "run", "src/index.ts", "init", wikiDir, "--name", "regwiki"],
       {
         cwd: process.cwd(),
         stdout: "pipe",
@@ -458,7 +458,7 @@ describe("init command (integration)", () => {
   it("uses directory basename as default name", async () => {
     const wikiDir = join(testDir, "auto-named");
     const proc = Bun.spawn(
-      ["bun", "run", "bin/wiki.ts", "init", wikiDir],
+      ["bun", "run", "src/index.ts", "init", wikiDir],
       {
         cwd: process.cwd(),
         stdout: "pipe",
@@ -479,7 +479,7 @@ describe("viz scaffolding", () => {
   it("scaffolds viz files with --backend git by default", async () => {
     const wikiDir = join(testDir, "vizwiki");
     const proc = Bun.spawn(
-      ["bun", "run", "bin/wiki.ts", "init", wikiDir, "--name", "vizwiki", "--backend", "git"],
+      ["bun", "run", "src/index.ts", "init", wikiDir, "--name", "vizwiki", "--backend", "git"],
       {
         cwd: process.cwd(),
         stdout: "pipe",
@@ -505,7 +505,7 @@ describe("viz scaffolding", () => {
   it("skips viz files with --no-viz", async () => {
     const wikiDir = join(testDir, "novizwiki");
     const proc = Bun.spawn(
-      ["bun", "run", "bin/wiki.ts", "init", wikiDir, "--name", "novizwiki", "--backend", "git", "--no-viz"],
+      ["bun", "run", "src/index.ts", "init", wikiDir, "--name", "novizwiki", "--backend", "git", "--no-viz"],
       {
         cwd: process.cwd(),
         stdout: "pipe",
@@ -534,7 +534,7 @@ describe("viz scaffolding", () => {
   it("does not scaffold viz for filesystem backend", async () => {
     const wikiDir = join(testDir, "fswiki");
     const proc = Bun.spawn(
-      ["bun", "run", "bin/wiki.ts", "init", wikiDir, "--name", "fswiki"],
+      ["bun", "run", "src/index.ts", "init", wikiDir, "--name", "fswiki"],
       {
         cwd: process.cwd(),
         stdout: "pipe",
@@ -565,7 +565,7 @@ describe("viz scaffolding", () => {
     };
     // First: init without viz
     const proc1 = Bun.spawn(
-      ["bun", "run", "bin/wiki.ts", "init", wikiDir, "--name", "existingwiki", "--backend", "git", "--no-viz"],
+      ["bun", "run", "src/index.ts", "init", wikiDir, "--name", "existingwiki", "--backend", "git", "--no-viz"],
       { cwd: process.cwd(), stdout: "pipe", stderr: "pipe", env: gitEnv },
     );
     await proc1.exited;
@@ -577,7 +577,7 @@ describe("viz scaffolding", () => {
 
     // Re-run with --viz
     const proc2 = Bun.spawn(
-      ["bun", "run", "bin/wiki.ts", "init", wikiDir, "--viz"],
+      ["bun", "run", "src/index.ts", "init", wikiDir, "--viz"],
       { cwd: process.cwd(), stdout: "pipe", stderr: "pipe", env: gitEnv },
     );
     await proc2.exited;
@@ -600,7 +600,7 @@ describe("viz scaffolding", () => {
   it("viz files are included in initial git commit", async () => {
     const wikiDir = join(testDir, "vizcommit");
     const proc = Bun.spawn(
-      ["bun", "run", "bin/wiki.ts", "init", wikiDir, "--name", "vizcommit", "--backend", "git"],
+      ["bun", "run", "src/index.ts", "init", wikiDir, "--name", "vizcommit", "--backend", "git"],
       {
         cwd: process.cwd(),
         stdout: "pipe",

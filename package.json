@@ -9,15 +9,15 @@
   "license": "MIT",
   "type": "module",
   "bin": {
-    "wiki": "dist/wiki.js",
-    "llmwiki": "dist/wiki.js"
+    "wiki": "dist/index.js",
+    "llmwiki": "dist/index.js"
   },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "bun build bin/wiki.ts --outfile dist/wiki.js --target node",
-    "dev": "bun run bin/wiki.ts",
+    "build": "bun build src/index.ts --outfile dist/index.js --target node",
+    "dev": "bun run src/index.ts",
     "test": "bun test",
     "typecheck": "bunx tsc --noEmit",
     "prepublishOnly": "bun run build"

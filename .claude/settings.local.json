@@ -17,7 +17,7 @@
       "Bash(node:*)",
       "Bash(npm whoami:*)",
       "Bash(npm publish:*)",
-      "Bash(chmod +x dist/wiki.js)",
+      "Bash(chmod +x dist/index.js)",
       "Bash(npm pack:*)",
       "Bash(npm pkg:*)",
       "Bash(npm view:*)",

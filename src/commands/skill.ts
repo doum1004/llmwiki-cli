@@ -1,8 +1,22 @@
 import { Command } from "commander";
 
+/** Printed by `wiki skill`; canonical agent guide (README points here). Keep aligned with `src/index.ts` and `src/lib/templates.ts` SCHEMA. */
 const SKILL_GUIDE = `# llmwiki-cli — LLM Agent Skill Guide
 
-You are operating a wiki CLI that manages markdown knowledge bases. You are the brain (deciding what to create, connect, and update). The CLI is the hands (reading, writing, searching, and syncing files). The CLI never calls any LLM API — it is a pure filesystem + git tool.
+You are operating a wiki CLI that manages markdown knowledge bases. You are the brain (deciding what to create, connect, and update). The CLI is the hands (reading, writing, searching, and syncing files). The CLI never calls any LLM API — it is a pure storage tool.
+
+## Storage Backends
+
+The CLI supports two storage backends:
+
+| Backend | Description | Init |
+|---------|-------------|------|
+| \`filesystem\` (default) | Plain markdown files on disk, no versioning | \`wiki init my-wiki\` |
+| \`git\` | Filesystem + auto-commit + auto-push to GitHub | \`wiki init my-wiki --backend git --git-token <pat>\` |
+
+- **filesystem**: Simplest. Pages are \`.md\` files. No versioning.
+- **git**: Every \`wiki write\` and \`wiki append\` auto-commits and auto-pushes. Init with \`--git-token\` can auto-create a **public** \`wiki-<name>\` repo; the PAT is **not** saved in \`.llmwiki.yaml\` (use \`LLMWIKI_GIT_TOKEN\`, \`GITHUB_TOKEN\`, or \`GIT_TOKEN\` for later pushes). PAT needs **\`workflow\`** scope (or fine-grained equivalent) to push \`.github/workflows/wiki-viz.yml\`. Omit \`--git-token\` for local-only git.
+- **Profiles:** \`wiki profile use <slug>\`, \`--profile\`, \`LLMWIKI_PROFILE\`, or \`profile\` in \`.llmwiki.yaml\` choose a namespace. Files are stored under \`profiles/<slug>/\` in the wiki directory. Not a security boundary on shared disks.
 
 ## Critical Patterns
 
@@ -116,8 +130,7 @@ wiki index add "sources/attention-paper.md" "Attention Is All You Need (2017)"
 wiki index add "concepts/transformers.md" "Transformer architecture overview"
 wiki log append ingest "Attention paper and transformer concepts"
 
-# 5. Commit
-wiki commit "ingest: attention paper"
+# Done — git backend auto-commits on write
 \`\`\`
 
 ### Answer a question using the wiki
@@ -148,23 +161,8 @@ wiki orphans                         # pages nobody links to
 wiki status                          # overview stats
 
 # 3. Fix issues: add frontmatter, create missing pages, connect orphans
-# 4. Commit fixes
+# 4. Log fixes (git backend auto-commits on write)
 wiki log append maintenance "Fixed broken links and orphan pages"
-wiki commit "maintenance: fix lint issues"
-\`\`\`
-
-### Sync to GitHub
-
-\`\`\`bash
-# One-time setup
-wiki auth login                      # authenticate with GitHub PAT
-wiki init … --backend git --git-token <pat>  # auto-creates public wiki-<name> repo; PAT not saved in YAML
-
-# After making changes
-wiki push
-
-# Or pull + push in one step
-wiki sync
 \`\`\`
 
 ### Multi-wiki operations
@@ -182,11 +180,12 @@ wiki search "neural networks" --all  # search across all wikis
 
 | Command | Description |
 |---------|-------------|
-| \`wiki init [dir] --name <n> --domain <d>\` | Create new wiki with directory structure |
-| \`wiki init [dir] --backend git [--no-viz]\` | Create git-backed wiki (--viz default, adds GitHub Pages graph) |
+| \`wiki init [dir] --name <n> --domain <d> --backend <type>\` | Create new wiki (backends: filesystem, git) |
+| \`wiki init [dir] --backend git --git-token <pat> [--git-repo owner/repo]\` | Create git-backed wiki with GitHub sync + visualization |
+| \`wiki init [dir] --backend git --no-viz\` | Create git-backed wiki without visualization |
 | \`wiki init [existing-dir] --viz\` | Add visualization to existing git wiki |
 | \`wiki registry\` | List all registered wikis |
-| \`wiki use [wiki-id]\` | Set active wiki (interactive picker if no id) |
+| \`wiki use [wiki-id]\` | List wikis or set active wiki |
 | \`wiki profile show | use <slug> | clear\` | Storage profile: uses \`profiles/<slug>/\` subdirectory; \`--profile\` / \`LLMWIKI_PROFILE\` override |
 
 ### Reading & Writing
@@ -209,14 +208,6 @@ wiki search "neural networks" --all  # search across all wikis
 | \`wiki log show [--last N] [--type T]\` | Print log entries (filter by count/type) |
 | \`wiki log append <type> <message>\` | Append log entry (types: ingest, query, maintenance, etc.) |
 
-### Git Operations
-
-| Command | Description |
-|---------|-------------|
-| \`wiki commit [message]\` | Git add + commit (auto-message from last log entry if omitted) |
-| \`wiki history [path] [--last N]\` | Git log (optionally for a specific page) |
-| \`wiki diff [ref]\` | Git diff (optionally against a ref) |
-
 ### Health & Links
 
 | Command | Description |
@@ -227,38 +218,21 @@ wiki search "neural networks" --all  # search across all wikis
 | \`wiki orphans\` | List pages with no inbound links |
 | \`wiki status [--json]\` | Wiki overview: page counts, link stats, recent activity, git info |
 
-### GitHub Sync
-
-| Command | Description |
-|---------|-------------|
-| \`wiki auth login\` | Authenticate with GitHub PAT |
-| \`wiki auth status\` | Show current auth status |
-| \`wiki auth logout\` | Remove stored credentials |
-| \`wiki repo list [--all] [--filter F]\` | List GitHub repos |
-| \`wiki repo create <name> [--domain D] [--public]\` | Create repo + init wiki |
-| \`wiki repo clone [name] [--dir D]\` | Clone repo + register as wiki |
-| \`wiki repo connect [wiki-id]\` | Connect existing wiki to new GitHub repo |
-| \`wiki push\` | Git push to remote |
-| \`wiki pull\` | Git pull from remote |
-| \`wiki sync\` | Pull then push |
-
 ## Gotchas
 
 1. **Always use heredoc for write/append** — these commands read stdin, not arguments. Running \`wiki write path.md "content"\` will hang waiting for stdin.
 
 2. **Always update index + log** — after creating or modifying pages, call \`wiki index add\` and \`wiki log append\`. The \`wiki lint\` command checks for pages missing from the index.
 
-3. **Commit after meaningful changes** — \`wiki commit\` without a message auto-generates one from the last log entry. Add a log entry first for good commit messages.
+3. **append fails if page doesn't exist** — use \`wiki write\` to create new pages, \`wiki append\` only for existing ones.
 
-4. **append fails if page doesn't exist** — use \`wiki write\` to create new pages, \`wiki append\` only for existing ones.
+4. **Wiki resolution** — if commands fail with "No wiki found", either \`cd\` into a wiki directory, run \`wiki use <id>\` to set a default, or pass \`--wiki <id>\`.
 
-5. **Wiki resolution** — if commands fail with "No wiki found", either \`cd\` into a wiki directory, run \`wiki use <id>\` to set a default, or pass \`--wiki <id>\`.
+5. **search --all** searches across all registered wikis, not just the active one.
 
-6. **search --all** searches across all registered wikis, not just the active one.
+6. **lint checks five things**: broken wikilinks, orphan pages, missing frontmatter, empty pages, and index consistency (pages not in index, index entries pointing to missing pages).
 
-7. **lint checks five things**: broken wikilinks, orphan pages, missing frontmatter, empty pages, and index consistency (pages not in index, index entries pointing to missing pages).
-
-8. **GitHub Pages visualization** — git-backend wikis include a GitHub Actions workflow that builds an interactive graph on every push. Enable Pages in repo settings (Settings > Pages > Source: GitHub Actions). Use \`--no-viz\` at init to skip, or re-run \`wiki init <dir> --viz\` to add it later.`;
+7. **GitHub Pages visualization** — git-backend wikis include a GitHub Actions workflow that builds an interactive graph on every push. Enable Pages in repo settings (Settings > Pages > Source: GitHub Actions). Use \`--no-viz\` at init to skip, or re-run \`wiki init <dir> --viz\` to add it later.`;
 
 export function makeSkillCommand(): Command {
   return new Command("skill")

@@ -1,29 +1,31 @@
-# LLM Wiki CLI
+# LLM Wiki CLI — AI / agent context
 
-## What This Is
+**Audience:** This file is for **AI assistants and coding agents** (instructions, rules, architecture, conventions). **Humans** should use [README.md](README.md) for project overview, installation, badges, and user-oriented examples.
+
+## What this is
 
 A CLI tool that helps LLM agents (Claude Code, Codex, etc.) build and maintain personal knowledge bases. The CLI is the hands — it reads, writes, searches, and manages wiki files. The LLM is the brain — it decides what to create, update, and connect.
 
 **Key principle: The CLI never calls any LLM API. It is a pure storage tool with pluggable backends (filesystem, git).**
 
-## Tech Stack
+## Tech stack
 
-- **Runtime**: Bun (development), Node.js (published bundle)
-- **Language**: TypeScript
-- **Dependencies**: commander (CLI), js-yaml (YAML parsing)
-- **Build**: `bun build` bundles to `dist/wiki.js` targeting Node.js
-- **Tests**: Bun test runner (`bun test`)
+- **Runtime:** Bun (development), Node.js (published bundle)
+- **Language:** TypeScript
+- **Dependencies:** commander (CLI), js-yaml (YAML parsing)
+- **Build:** `bun build` bundles to `dist/index.js` targeting Node.js
+- **Tests:** Bun test runner (`bun test`)
 
-## LLM Agent Skill Guide
+## LLM agent skill guide
 
-Run `wiki skill` to print the full guide, or see [`docs/SKILL.md`](docs/SKILL.md) for the source. Covers workflows, command patterns, and gotchas for LLM agents.
+Run `wiki skill` to print the full guide. **Source of truth** for that text is the `SKILL_GUIDE` string in [`src/commands/skill.ts`](src/commands/skill.ts) — keep it aligned with commands registered in [`src/index.ts`](src/index.ts) and with scaffolded wiki docs in [`src/lib/templates.ts`](src/lib/templates.ts) (e.g. `SCHEMA.md`). End users are also pointed here from README.
 
-## Project Structure
+## Project structure
 
 ```
-bin/wiki.ts              # CLI entry point (source)
-dist/wiki.js             # Built bundle (npm-published artifact)
+dist/index.js            # Built bundle (npm-published artifact)
 src/
+  index.ts               # CLI entry point (source)
   types.ts               # Shared TypeScript interfaces
   lib/
     storage.ts           # StorageProvider factory (createProvider)
@@ -32,6 +34,7 @@ src/
     config.ts            # .llmwiki.yaml read/write
     registry.ts          # Global registry (~/.config/llmwiki/registry.yaml)
     resolver.ts          # Wiki resolution chain (--wiki → cwd → walk up → default)
+    profile.ts           # Storage profile resolution (env / CLI / registry / config)
     git.ts               # Git operations via child_process.execFile
     github.ts            # GitHub API: createRepo, getUsername, enablePages
     git-credentials.ts   # resolvedGitToken: env LLMWIKI_GIT_TOKEN / GITHUB_TOKEN / GIT_TOKEN, then YAML
@@ -44,7 +47,8 @@ src/
   commands/
     init.ts              # wiki init (--backend, --git-token, --viz)
     registry.ts          # wiki registry
-    use.ts               # wiki use
+    use.ts                 # wiki use
+    profile-cmd.ts       # wiki profile (show / use / clear)
     read.ts              # wiki read
     write.ts             # wiki write
     append.ts            # wiki append
@@ -68,26 +72,16 @@ test/
   git-credentials.test.ts # resolvedGitToken precedence
   github.test.ts         # GitHub API with mocked fetch
   commands.test.ts       # End-to-end CLI command integration tests
-docs/
-  phase-1.md             # Phase tracking files
-  phase-2.md
-  phase-3.md
-  phase-4.md
-  phase-5.md
 scripts/
   generate-viz-scripts.ts # Extracts viz build scripts from templates.ts (used by demo workflow)
 test-wiki-page/
   wiki/                  # Example wiki pages for live demo on GitHub Pages
-    index.md
-    log.md
-    concepts/
-    sources/
-    synthesis/
 ```
 
-## Commands
+## Commands (registered)
 
-### Wiki Management
+### Wiki management
+
 ```
 wiki init [dir] --name --domain --backend <filesystem|git>
 wiki init [dir] --backend git --git-token <pat> [--git-repo owner/repo]
@@ -95,59 +89,63 @@ wiki init [dir] --backend git --no-viz              # Skip visualization scaffol
 wiki init [existing-wiki-dir] --viz                 # Add visualization to existing git wiki
 wiki registry                       # List all wikis
 wiki use [wiki-id]                  # Set active wiki
+wiki profile show | use <slug> | clear   # Storage profile under profiles/<slug>/
 ```
 
-### Reading & Writing
+### Reading and writing
+
 ```
-wiki read <path>                    # Print page to stdout
-wiki write <path>                   # Write stdin to page
-wiki append <path>                  # Append stdin to page
-wiki list [dir] [--tree] [--json]   # List pages
-wiki search <query> [--limit N] [--json]  # Search pages
+wiki read <path>
+wiki write <path>                   # stdin → page
+wiki append <path>                 # stdin appended
+wiki list [dir] [--tree] [--json]
+wiki search <query> [--limit N] [--all] [--json]
 ```
 
-### Index & Log
+### Index and log
+
 ```
-wiki index show                     # Print master index
-wiki index add <path> <summary>     # Add entry to index
-wiki index remove <path>            # Remove entry
-wiki log show [--last N] [--type T] # Print log entries
-wiki log append <type> <message>    # Append log entry
+wiki index show | add <path> <summary> | remove <path>
+wiki log show [--last N] [--type T] | append <type> <message>
 ```
 
-### Health & Links
+### Health and links
+
 ```
-wiki lint [--json]                  # Check wiki health (broken links, orphans, frontmatter, index)
-wiki links <path>                   # Outbound + inbound links
-wiki backlinks <path>               # Inbound links only
-wiki orphans                        # Pages with no inbound links
-wiki status [--json]                # Wiki overview stats
+wiki lint [--json]
+wiki links <path>
+wiki backlinks <path>
+wiki orphans
+wiki status [--json]
 ```
+
+### Agent help
+
+```
+wiki skill                          # Print LLM agent skill guide (source: skill.ts)
+```
+
+There are **no** top-level `wiki auth`, `wiki repo`, `wiki push`, `wiki pull`, `wiki sync`, `wiki commit`, `wiki history`, or `wiki diff` commands. Git remote sync for the **git** backend happens inside `GitProvider` on successful `write` / `append` when repo and token are configured.
 
 ## Architecture
 
-- **StorageProvider pattern**: All page I/O goes through the `StorageProvider` interface (5 methods: readPage, writePage, appendPage, pageExists, listPages). Two implementations:
-  - `WikiManager` — filesystem (default)
-  - `GitProvider` — wraps WikiManager, auto-commits + auto-pushes on write/append
-- **Provider factory**: `createProvider(config, root)` in `src/lib/storage.ts`. Async. Called once in preAction hook, injected as `ctx.provider`.
-- **Commander pattern**: Each command is a factory function (`makeXxxCommand()`) returning a `Command` instance, registered via `program.addCommand()`.
-- **preAction hook**: Resolves which wiki to target, creates the StorageProvider, attaches both to `WikiContext`. Commands in `SKIP_RESOLUTION` set (init, registry, use, skill) bypass this.
-- **Wiki resolution order**: `--wiki` flag → cwd `.llmwiki.yaml` → walk up directories → registry default.
-- **Credentials in config**: Git stores **`git.repo` only**; PAT comes from `LLMWIKI_GIT_TOKEN`, `GITHUB_TOKEN`, or `GIT_TOKEN` (or legacy optional `git.token` in YAML). No separate auth commands — `wiki init` flags for first-time setup.
-- **IndexManager/LogManager**: Accept `StorageProvider` in constructor (not filesystem paths). Backend-agnostic.
-- **Registry**: Global at `~/.config/llmwiki/registry.yaml`, overridable via `LLMWIKI_CONFIG_DIR` env var (used in tests).
-- **Git**: All operations use `child_process.execFile`, return `{ ok: boolean, output: string }`.
-- **GitHub API**: `createRepo`, `getUsername`, `enablePages` in `src/lib/github.ts`. Used by init for auto-creating repos and enabling GitHub Pages.
-- **Viz scaffolding**: `wiki init --backend git` scaffolds GitHub Actions workflow + build scripts for d3-force graph visualization deployed to GitHub Pages. Controlled by `--viz` (default true) / `--no-viz`. Re-running `wiki init <dir> --viz` on an existing git wiki adds viz files without overwriting wiki content.
-- **No Bun-specific APIs in src/**: Source code uses only Node.js APIs for npm compatibility. Bun APIs are only used in tests.
+- **StorageProvider pattern:** All page I/O goes through the `StorageProvider` interface (`readPage`, `writePage`, `appendPage`, `pageExists`, `listPages`). Implementations: `WikiManager` (filesystem), `GitProvider` (wraps wiki root + optional auto push).
+- **Provider factory:** `createProvider(config, root, options?)` in `src/lib/storage.ts`. Async. Injected as `ctx.provider` after wiki resolution.
+- **Commander:** Each command is a factory `makeXxxCommand()` registered on the program. `preAction` resolves wiki, builds provider, attaches `WikiContext` (includes `storageScope` for profiles).
+- **SKIP_RESOLUTION:** `init`, `registry`, `use`, `skill` bypass wiki context. Exception: `profile use` runs under `profile` and **does** require resolution (see hook in `src/index.ts`).
+- **Wiki resolution order:** `--wiki` flag → cwd `.llmwiki.yaml` → walk up directories → registry default.
+- **Credentials:** Git stores `git.repo` only; PAT from `LLMWIKI_GIT_TOKEN`, `GITHUB_TOKEN`, or `GIT_TOKEN` (or legacy optional `git.token` in YAML).
+- **Registry:** `~/.config/llmwiki/registry.yaml`, overridable with `LLMWIKI_CONFIG_DIR` (used in tests).
+- **Git:** `child_process.execFile`. **GitHub API:** `createRepo`, `getUsername`, `enablePages` in `src/lib/github.ts` for init.
+- **Viz:** Git init can scaffold GitHub Actions + d3-force graph for Pages (`--viz` default / `--no-viz`).
 
 ## Development
 
 ```bash
 bun install              # Install deps
 bun run dev              # Run CLI via source
-bun test                 # Run tests (194 tests across 13 files)
-bun run build            # Bundle to dist/wiki.js
+bun test                 # Run tests
+bun run build            # Bundle to dist/index.js
 bun run typecheck        # TypeScript check
 ```
 
@@ -161,16 +159,9 @@ bun run typecheck        # TypeScript check
 | Config file | `.llmwiki.yaml` |
 | Global config dir | `~/.config/llmwiki/` |
 
-## Build Phases
+## Shipped capabilities (high level)
 
-See `docs/phase-{1-5}.md` for detailed tracking. All phases complete:
-- Phase 1: **COMPLETE** — init, registry, use
-- Phase 2: **COMPLETE** — read, write, append, list, search
-- Phase 3: **COMPLETE** — index, log, commit, history, diff
-- Phase 4: **COMPLETE** — lint, links, backlinks, orphans, status
-- Phase 5: **COMPLETE** — auth, repo, push, pull, sync
-- Phase 6: **COMPLETE** — StorageProvider abstraction (filesystem, git backends)
-- Phase 7: **COMPLETE** — GitHub Pages visualization (GitHub Actions workflow, d3-force graph)
+Use [CHANGELOG.md](CHANGELOG.md) for release-by-release detail. In the tree today: init/registry/use/profile; read/write/append/list/search; index/log; lint/links/backlinks/orphans/status; skill; filesystem and git backends with optional `profiles/<slug>/`; GitHub Pages viz scaffolding for git wikis.
 
 ## Conventions
 
@@ -180,3 +171,4 @@ See `docs/phase-{1-5}.md` for detailed tracking. All phases complete:
 - `--json` flag on commands producing structured output
 - Git failures during init are warnings, not fatal errors
 - Tests use temp directories and `LLMWIKI_CONFIG_DIR` env var for isolation
+- **No Bun-specific APIs in `src/`** — Node-compatible; Bun only in tests and dev script

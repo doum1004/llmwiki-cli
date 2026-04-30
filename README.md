@@ -37,6 +37,8 @@ filesystem | git (auto-commit + auto-push)
 
 **Key principle**: The CLI never calls any LLM API. It is a pure storage tool with pluggable backends.
 
+**AI assistants / coding agents:** Use [CLAUDE.md](CLAUDE.md) for instructions, rules, and technical context. This README stays oriented to people (overview, install, usage).
+
 ## Install
 
 ```bash
@@ -154,7 +156,7 @@ wiki status [--json]                                # Wiki overview stats
 
 ## LLM Agent Skill Guide
 
-Run `wiki skill` to print the full guide, or see [`docs/SKILL.md`](docs/SKILL.md) for the source. Covers workflows, command patterns, page format, and common gotchas for LLM agents.
+Run `wiki skill` to print the full guide. The canonical text lives in [`src/commands/skill.ts`](src/commands/skill.ts) (`SKILL_GUIDE`); update it when commands change. Covers workflows, command patterns, page format, and common gotchas for LLM agents.
 
 ## How LLM Agents Use This
 
@@ -246,7 +248,7 @@ git clone https://github.com/doum1004/llmwiki-cli
 cd llmwiki-cli
 bun install
 bun test            # 194 tests
-bun run build       # bundle to dist/wiki.js
+bun run build       # bundle to dist/index.js
 bun run dev -- --help
 ```
 

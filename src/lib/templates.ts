@@ -71,9 +71,10 @@ Page content here. Use [[wikilinks]] to connect pages.
 
 ### Wiki Management
 \`\`\`bash
-wiki init [dir] --name <name> --domain <domain>   # Create new wiki
+wiki init [dir] --name <name> --domain <domain> [--backend filesystem|git]  # Create new wiki
 wiki registry                                       # List all wikis
 wiki use [wiki-id]                                  # Set active wiki
+wiki profile show | use <slug> | clear              # Storage profile under profiles/<slug>/
 \`\`\`
 
 ### Reading & Writing
@@ -98,12 +99,8 @@ wiki log show [--last N] [--type T]                 # Print log entries
 wiki log append <type> <message>                    # Append log entry
 \`\`\`
 
-### Git Operations
-\`\`\`bash
-wiki commit [message]                               # Git add + commit
-wiki history [path] [--last N]                      # Git log
-wiki diff [ref]                                     # Git diff
-\`\`\`
+### Git backend
+With \`--backend git\`, \`wiki write\` and \`wiki append\` auto-commit and auto-push when \`git.repo\` and a token (\`LLMWIKI_GIT_TOKEN\`, \`GITHUB_TOKEN\`, or \`GIT_TOKEN\`) are configured. Use \`wiki init ... --backend git --git-token <pat>\` for GitHub setup.
 
 ### Health & Links
 \`\`\`bash
@@ -112,14 +109,6 @@ wiki links <path>                                   # Outbound + inbound links
 wiki backlinks <path>                               # Inbound links only
 wiki orphans                                        # Pages with no inbound links
 wiki status [--json]                                # Wiki overview stats
-\`\`\`
-
-### GitHub Sync
-\`\`\`bash
-wiki auth login                                     # GitHub device flow auth
-wiki push                                           # Git push
-wiki pull                                           # Git pull
-wiki sync                                           # Pull + push
 \`\`\`
 
 ## Ingest Workflow
@@ -133,7 +122,7 @@ When ingesting a new source:
 5. If cross-cutting insights emerge → create \`wiki/synthesis/\` pages
 6. Update \`wiki/index.md\` with new entries
 7. Append to \`wiki/log.md\` with ingest activity
-8. Commit: \`wiki commit "ingest: <source description>"\`
+8. With git backend, each \`wiki write\`/\`wiki append\` is committed automatically; otherwise version locally with git as you prefer
 
 ## Query Workflow
 
@@ -153,7 +142,7 @@ Periodically check wiki health:
 2. Fix broken links by creating missing pages or updating references
 3. Connect orphan pages by adding wikilinks from related pages
 4. Add frontmatter to pages missing it
-5. Commit fixes: \`wiki commit "maintenance: fix lint issues"\`
+5. With git backend, fixes are committed when you \`wiki write\`/\`wiki append\`; log maintenance in \`wiki log append\` as usual
 
 ## Conventions
 

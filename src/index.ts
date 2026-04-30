@@ -1,35 +1,36 @@
 #!/usr/bin/env node
 
 import { Command } from "commander";
-import { makeInitCommand } from "../src/commands/init.ts";
-import { makeRegistryCommand } from "../src/commands/registry.ts";
-import { makeUseCommand } from "../src/commands/use.ts";
-import { makeReadCommand } from "../src/commands/read.ts";
-import { makeWriteCommand } from "../src/commands/write.ts";
-import { makeAppendCommand } from "../src/commands/append.ts";
-import { makeListCommand } from "../src/commands/list.ts";
-import { makeSearchCommand } from "../src/commands/search.ts";
-import { makeIndexCommand } from "../src/commands/index-cmd.ts";
-import { makeLogCommand } from "../src/commands/log-cmd.ts";
-import { makeLintCommand } from "../src/commands/lint.ts";
-import { makeLinksCommand } from "../src/commands/links.ts";
-import { makeBacklinksCommand } from "../src/commands/backlinks.ts";
-import { makeOrphansCommand } from "../src/commands/orphans.ts";
-import { makeStatusCommand } from "../src/commands/status.ts";
-import { makeSkillCommand } from "../src/commands/skill.ts";
-import { makeProfileCommand } from "../src/commands/profile-cmd.ts";
-import { resolveWiki } from "../src/lib/resolver.ts";
-import { loadRegistry, getStorageProfile } from "../src/lib/registry.ts";
-import { createProvider, effectiveFilesystemRoot } from "../src/lib/storage.ts";
-import { resolveStorageProfile } from "../src/lib/profile.ts";
-import type { GlobalOptions, WikiContext } from "../src/types.ts";
+import { makeInitCommand } from "./commands/init.ts";
+import { makeRegistryCommand } from "./commands/registry.ts";
+import { makeUseCommand } from "./commands/use.ts";
+import { makeReadCommand } from "./commands/read.ts";
+import { makeWriteCommand } from "./commands/write.ts";
+import { makeAppendCommand } from "./commands/append.ts";
+import { makeListCommand } from "./commands/list.ts";
+import { makeSearchCommand } from "./commands/search.ts";
+import { makeIndexCommand } from "./commands/index-cmd.ts";
+import { makeLogCommand } from "./commands/log-cmd.ts";
+import { makeLintCommand } from "./commands/lint.ts";
+import { makeLinksCommand } from "./commands/links.ts";
+import { makeBacklinksCommand } from "./commands/backlinks.ts";
+import { makeOrphansCommand } from "./commands/orphans.ts";
+import { makeStatusCommand } from "./commands/status.ts";
+import { makeSkillCommand } from "./commands/skill.ts";
+import { makeProfileCommand } from "./commands/profile-cmd.ts";
+import { resolveWiki } from "./lib/resolver.ts";
+import { loadRegistry, getStorageProfile } from "./lib/registry.ts";
+import { createProvider, effectiveFilesystemRoot } from "./lib/storage.ts";
+import { resolveStorageProfile } from "./lib/profile.ts";
+import type { GlobalOptions, WikiContext } from "./types.ts";
+import packageJson from "../package.json" with { type: "json" };
 
 const program = new Command();
 
 program
   .name("wiki")
-  .description("CLI tool for LLM agents to build and maintain knowledge bases")
-  .version("0.1.5")
+  .description(packageJson.description)
+  .version(packageJson.version)
   .option("-w, --wiki <id>", "specify wiki by registry id")
   .option(
     "-p, --profile <id>",

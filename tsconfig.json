@@ -5,6 +5,7 @@
     "module": "ESNext",
     "moduleDetection": "force",
     "moduleResolution": "bundler",
+    "resolveJsonModule": true,
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "noEmit": true,
@@ -15,5 +16,5 @@
     "noImplicitOverride": true,
     "types": ["bun"]
   },
-  "include": ["src/**/*.ts", "bin/**/*.ts", "test/**/*.ts"]
+  "include": ["src/**/*.ts", "test/**/*.ts"]
 }

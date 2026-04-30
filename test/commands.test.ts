@@ -10,7 +10,7 @@ const origConfigDir = process.env.LLMWIKI_CONFIG_DIR;
 
 async function runWiki(args: string[], input?: string): Promise<{ stdout: string; stderr: string; exitCode: number }> {
   const proc = Bun.spawn(
-    ["bun", "run", "bin/wiki.ts", ...args],
+    ["bun", "run", "src/index.ts", ...args],
     {
       cwd: process.cwd(),
       stdout: "pipe",
