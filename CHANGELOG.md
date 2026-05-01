@@ -2,6 +2,18 @@
 
 <!-- New entries are prepended automatically by the publish workflow -->
 
+## v1.0.1 — 2026-05-01
+
+### Changes
+
+- chore: update version to 1.0.0 in package-lock.json (c552eba)
+- Refactor wiki structure and improve command functionality (428e3e5)
+
+**Full diff:** [v0.3.1...v1.0.1](https://github.com/doum1004/llmwiki-cli/compare/v0.3.1...v1.0.1)
+
+---
+
+
 =======
 
 ## v1.0.0 — 2026-04-30
