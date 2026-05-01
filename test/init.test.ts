@@ -9,15 +9,12 @@ import {
   addToRegistry,
   removeFromRegistry,
   setDefault,
-  setStorageProfile,
-  getStorageProfile,
 } from "../src/lib/registry.ts";
 import { resolveWiki } from "../src/lib/resolver.ts";
 import {
   getDefaultConfig,
   getDefaultSchema,
   getDefaultIndex,
-  getDefaultLog,
   getVizWorkflow,
   getBuildGraphScript,
   getBuildSiteScript,
@@ -190,54 +187,6 @@ describe("registry", () => {
     expect(result).toBe(false);
   });
 
-  it("setStorageProfile saves slug and getStorageProfile reads it", async () => {
-    const entry: RegistryEntry = {
-      path: "/tmp/wiki1",
-      name: "wiki1",
-      domain: "general",
-      created: "2026-01-01T00:00:00.000Z",
-    };
-    await addToRegistry("wiki1", entry);
-    await setStorageProfile("wiki1", "dad");
-    const registry = await loadRegistry();
-    expect(getStorageProfile(registry, "wiki1")).toBe("dad");
-    expect(registry.storageProfiles?.wiki1).toBe("dad");
-  });
-
-  it("setStorageProfile returns false for unknown wiki id", async () => {
-    const ok = await setStorageProfile("missing", "dad");
-    expect(ok).toBe(false);
-  });
-
-  it("removeFromRegistry removes storageProfiles entry", async () => {
-    const entry: RegistryEntry = {
-      path: "/tmp/wiki1",
-      name: "wiki1",
-      domain: "general",
-      created: "2026-01-01T00:00:00.000Z",
-    };
-    await addToRegistry("wiki1", entry);
-    await setStorageProfile("wiki1", "mom");
-    await removeFromRegistry("wiki1");
-    const registry = await loadRegistry();
-    expect(getStorageProfile(registry, "wiki1")).toBeUndefined();
-  });
-
-  it("setStorageProfile with null clears saved profile", async () => {
-    const entry: RegistryEntry = {
-      path: "/tmp/wiki1",
-      name: "wiki1",
-      domain: "general",
-      created: "2026-01-01T00:00:00.000Z",
-    };
-    await addToRegistry("wiki1", entry);
-    await setStorageProfile("wiki1", "dad");
-    await setStorageProfile("wiki1", null);
-    const registry = await loadRegistry();
-    expect(getStorageProfile(registry, "wiki1")).toBeUndefined();
-    expect(registry.storageProfiles).toBeUndefined();
-  });
-
 });
 
 // --- resolver ---
@@ -328,11 +277,6 @@ describe("templates", () => {
     expect(index).toContain("## Synthesis");
   });
 
-  it("getDefaultLog contains init entry", () => {
-    const log = getDefaultLog();
-    expect(log).toContain("init | Wiki initialized");
-  });
-
   it("getVizWorkflow returns valid YAML with required fields", () => {
     const workflow = getVizWorkflow();
     expect(workflow).toContain("GITHUB_REPOSITORY");
@@ -406,7 +350,6 @@ describe("init command (integration)", () => {
     expect(await Bun.file(join(wikiDir, ".llmwiki.yaml")).exists()).toBe(true);
     expect(await Bun.file(join(wikiDir, "SCHEMA.md")).exists()).toBe(true);
     expect(await Bun.file(join(wikiDir, "wiki/index.md")).exists()).toBe(true);
-    expect(await Bun.file(join(wikiDir, "wiki/log.md")).exists()).toBe(true);
 
     // Init must not create a .git directory
     let hasGit = true;

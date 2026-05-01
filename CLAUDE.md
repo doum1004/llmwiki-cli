@@ -8,7 +8,7 @@ A CLI tool that helps LLM agents (Claude Code, Codex, etc.) build and maintain p
 
 **Key principle: The CLI never calls any LLM API. It is a pure filesystem tool: markdown under the wiki root via `StorageProvider` / `WikiManager`.**
 
-**Index and log:** Prefer `wiki write … --from-frontmatter` when creating pages that already have YAML `title`. Keep `wiki index` / `wiki log` for `index remove`, `show`, `log append` without writing a page, and other cases called out in `wiki skill`.
+**Write path:** `wiki write <path>` reads **JSON from stdin**, validates fields, writes YAML frontmatter + markdown body, and **upserts** `wiki/index.md` for paths under `wiki/` (except `wiki/index.md`). There is no separate index command. To edit a page: `wiki read` → merge in the agent → `wiki write` with full JSON.
 
 ## Tech stack
 
@@ -35,25 +35,20 @@ src/
     config.ts            # .llmwiki.yaml read/write
     registry.ts          # Global registry (~/.config/llmwiki/registry.yaml)
     resolver.ts          # Wiki resolution chain (--wiki → cwd → walk up → default)
-    profile.ts           # Storage profile resolution (env / CLI / registry / config)
-    templates.ts         # Default file content (SCHEMA.md, index.md, log.md; optional viz workflow/scripts for drop-in)
+    templates.ts         # Default file content (SCHEMA.md, index.md; optional viz workflow/scripts for drop-in)
     search.ts            # Full-text search with term-frequency ranking
-    index-manager.ts     # IndexManager: uses StorageProvider for index.md
-    log-manager.ts       # LogManager: uses StorageProvider for log.md
+    index-manager.ts     # IndexManager: uses StorageProvider for index.md (upsert/remove)
     frontmatter.ts       # YAML frontmatter parse/detect/add
     link-parser.ts       # Wikilink extraction and link graph building
   commands/
     init.ts              # wiki init (--name, --domain)
     registry.ts          # wiki registry
-    use.ts                 # wiki use
-    profile-cmd.ts       # wiki profile (show / use / clear)
+    use.ts               # wiki use
     read.ts              # wiki read
-    write.ts             # wiki write
-    append.ts            # wiki append
+    write.ts             # wiki write (JSON stdin)
+    delete.ts            # wiki delete
     list.ts              # wiki list
     search.ts            # wiki search
-    index-cmd.ts         # wiki index (add/remove/show)
-    log-cmd.ts           # wiki log (append/show)
     lint.ts              # wiki lint
     links.ts             # wiki links
     backlinks.ts         # wiki backlinks
@@ -78,26 +73,18 @@ test-wiki-page/
 
 ```
 wiki init [dir] --name --domain       # Create wiki (local files only)
-wiki registry                       # List all wikis
-wiki use [wiki-id]                  # Set active wiki
-wiki profile show | use <slug> | clear   # Storage profile under profiles/<slug>/
+wiki registry                         # List all wikis
+wiki use [wiki-id]                    # Set active wiki
 ```
 
 ### Reading and writing
 
 ```
 wiki read <path>
-wiki write <path> [--index-summary <s>] [--log-type <t> [--log-message <m>]] [--from-frontmatter]  # stdin → page; optional index + log; YAML title fills gaps when flag set
-wiki append <path>                 # stdin appended
+wiki write <path>                     # JSON on stdin → page + index upsert for wiki/*
+wiki delete <path>                    # Delete file + remove from index
 wiki list [dir] [--tree] [--json]
 wiki search <query> [--limit N] [--all] [--json]
-```
-
-### Index and log
-
-```
-wiki index show | add <path> <summary> | remove <path>
-wiki log show [--last N] [--type T] | append <type> <message>
 ```
 
 ### Health and links
@@ -120,10 +107,10 @@ There are **no** top-level `wiki auth`, `wiki repo`, `wiki push`, `wiki pull`, `
 
 ## Architecture
 
-- **StorageProvider pattern:** All page I/O goes through the `StorageProvider` interface (`readPage`, `writePage`, `appendPage`, `pageExists`, `listPages`). Implementation: `WikiManager` (filesystem).
-- **Provider factory:** `createProvider(config, root, options?)` in `src/lib/storage.ts` returns `WikiManager` at `effectiveFilesystemRoot`. Injected as `ctx.provider` after wiki resolution.
-- **Commander:** Each command is a factory `makeXxxCommand()` registered on the program. `preAction` resolves wiki, builds provider, attaches `WikiContext` (includes `storageScope` for profiles).
-- **SKIP_RESOLUTION:** `init`, `registry`, `use`, `skill` bypass wiki context. Exception: `profile use` runs under `profile` and **does** require resolution (see hook in `src/index.ts`).
+- **StorageProvider pattern:** All page I/O goes through the `StorageProvider` interface (`readPage`, `writePage`, `appendPage`, `deletePage`, `pageExists`, `listPages`). Implementation: `WikiManager` (filesystem).
+- **Provider factory:** `createProvider(config, root)` in [`src/lib/storage.ts`](src/lib/storage.ts) returns `WikiManager` rooted at the wiki directory. Injected as `ctx.provider` after wiki resolution.
+- **Commander:** Each command is a factory `makeXxxCommand()` registered on the program. `preAction` resolves wiki, builds provider, attaches `WikiContext`.
+- **SKIP_RESOLUTION:** `init`, `registry`, `use`, `skill` bypass wiki context.
 - **Wiki resolution order:** `--wiki` flag → cwd `.llmwiki.yaml` → walk up directories → registry default.
 - **Registry:** `~/.config/llmwiki/registry.yaml`, overridable with `LLMWIKI_CONFIG_DIR` (used in tests).
 - **Optional viz (GitHub Pages):** Not part of `wiki init`. README documents copying workflow + `scripts/` from this repo into a git-managed wiki directory.
@@ -150,7 +137,7 @@ bun run typecheck        # TypeScript check
 
 ## Shipped capabilities (high level)
 
-Use [CHANGELOG.md](CHANGELOG.md) for release-by-release detail. In the tree today: init/registry/use/profile; read/write/append/list/search; index/log; lint/links/backlinks/orphans/status; skill; filesystem storage with optional `profiles/<slug>/`; optional Pages viz as documented drop-in assets in `templates.ts` / README.
+Use [CHANGELOG.md](CHANGELOG.md) for release-by-release detail. In the tree today: init/registry/use; read/write/delete/list/search; lint/links/backlinks/orphans/status; skill; filesystem storage at wiki root only; optional Pages viz as documented drop-in assets in `templates.ts` / README.
 
 ## Conventions
 

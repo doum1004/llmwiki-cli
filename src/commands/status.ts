@@ -1,6 +1,5 @@
 import { Command } from "commander";
 import { buildLinkGraph } from "../lib/link-parser.ts";
-import { LogManager } from "../lib/log-manager.ts";
 import type { WikiContext } from "../types.ts";
 
 interface StatusInfo {
@@ -10,7 +9,6 @@ interface StatusInfo {
   created: string;
   pages: { total: number; byDir: Record<string, number> };
   links: { total: number; broken: number; orphans: number };
-  recentActivity: string[];
 }
 
 export function makeStatusCommand(): Command {
@@ -35,17 +33,10 @@ export function makeStatusCommand(): Command {
         totalLinks += data.outbound.length;
       }
 
-      const logMgr = new LogManager(ctx.provider);
-      const recentEntries = await logMgr.show({ last: 5 });
-      const recentActivity = recentEntries.map((e) => {
-        const match = e.match(/## (\[.*)/);
-        return match ? match[1]! : e;
-      });
-
       const info: StatusInfo = {
         name: ctx.config.name,
         domain: ctx.config.domain,
-        path: ctx.storageScope.effectiveRoot,
+        path: ctx.root,
         created: ctx.config.created,
         pages: { total: pages.length, byDir },
         links: {
@@ -53,7 +44,6 @@ export function makeStatusCommand(): Command {
           broken: graph.brokenLinks.length,
           orphans: graph.orphans.length,
         },
-        recentActivity,
       };
 
       if (options.json) {
@@ -73,12 +63,5 @@ export function makeStatusCommand(): Command {
       console.log(`\nLinks: ${info.links.total} wikilinks`);
       if (info.links.broken > 0) console.log(`  Broken: ${info.links.broken}`);
       if (info.links.orphans > 0) console.log(`  Orphans: ${info.links.orphans}`);
-
-      if (info.recentActivity.length > 0) {
-        console.log(`\nRecent activity:`);
-        for (const entry of info.recentActivity) {
-          console.log(`  ${entry}`);
-        }
-      }
     });
 }

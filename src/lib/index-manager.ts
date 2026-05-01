@@ -22,6 +22,15 @@ export class IndexManager {
     return (await this.provider.readPage(this.pagePath)) ?? "";
   }
 
+  /** Remove existing lines for `pagePath`, then insert under the section implied by the path. */
+  async upsertEntry(pagePath: string, summary: string): Promise<void> {
+    const pattern = `[[${pagePath}]]`;
+    const content = await this.read();
+    const stripped = content.split("\n").filter((line) => !line.includes(pattern)).join("\n");
+    await this.provider.writePage(this.pagePath, stripped);
+    await this.addEntry(pagePath, summary);
+  }
+
   async addEntry(pagePath: string, summary: string): Promise<void> {
     let content = await this.read();
     const section = categoryFromPath(pagePath);

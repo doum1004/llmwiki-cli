@@ -53,25 +53,16 @@ describe("WikiManager.readPage", () => {
   });
 });
 
-describe("WikiManager.appendPage", () => {
-  it("appends to existing file", async () => {
-    await wiki.writePage("page.md", "line1\n");
-    const ok = await wiki.appendPage("page.md", "line2\n");
-    expect(ok).toBe(true);
-    const content = await wiki.readPage("page.md");
-    expect(content).toBe("line1\nline2\n");
+describe("WikiManager.deletePage", () => {
+  it("removes an existing file", async () => {
+    await wiki.writePage("gone.md", "x");
+    await wiki.deletePage("gone.md");
+    expect(await wiki.pageExists("gone.md")).toBe(false);
+    expect(await wiki.readPage("gone.md")).toBeNull();
   });
 
-  it("adds newline separator if missing", async () => {
-    await wiki.writePage("page.md", "no-newline");
-    await wiki.appendPage("page.md", "more");
-    const content = await wiki.readPage("page.md");
-    expect(content).toBe("no-newline\nmore");
-  });
-
-  it("returns false for missing file", async () => {
-    const ok = await wiki.appendPage("missing.md", "content");
-    expect(ok).toBe(false);
+  it("throws for missing file", async () => {
+    await expect(wiki.deletePage("missing.md")).rejects.toBeDefined();
   });
 });
 

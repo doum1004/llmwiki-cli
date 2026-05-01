@@ -127,6 +127,23 @@ describe("IndexManager", () => {
     expect(matches).toHaveLength(2);
   });
 
+  it("upsertEntry replaces existing line for same path", async () => {
+    await mgr.addEntry("concepts/dup.md", "Old summary");
+    await mgr.upsertEntry("concepts/dup.md", "New summary");
+    const content = await mgr.read();
+    expect(content).toContain("— New summary");
+    expect(content).not.toContain("— Old summary");
+    const matches = content.match(/\[\[concepts\/dup\.md\]\]/g);
+    expect(matches).toHaveLength(1);
+  });
+
+  it("upsertEntry inserts when path absent", async () => {
+    await mgr.upsertEntry("concepts/new-up.md", "Fresh");
+    const content = await mgr.read();
+    expect(content).toContain("[[concepts/new-up.md]]");
+    expect(content).toContain("— Fresh");
+  });
+
   it("read returns empty string for missing file", async () => {
     const missingMgr = new IndexManager(wiki, "nonexistent.md");
     const content = await missingMgr.read();

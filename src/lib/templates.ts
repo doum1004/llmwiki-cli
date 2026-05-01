@@ -1,11 +1,7 @@
 import type { WikiConfig } from "../types.ts";
 
-export function getDefaultConfig(
-  name: string,
-  domain: string,
-  options?: { profile?: string },
-): WikiConfig {
-  const config: WikiConfig = {
+export function getDefaultConfig(name: string, domain: string): WikiConfig {
+  return {
     name,
     domain,
     created: new Date().toISOString(),
@@ -15,10 +11,6 @@ export function getDefaultConfig(
       schema: "SCHEMA.md",
     },
   };
-  if (options?.profile !== undefined) {
-    config.profile = options.profile;
-  }
-  return config;
 }
 
 export function getDefaultSchema(name: string, domain: string): string {
@@ -30,8 +22,7 @@ export function getDefaultSchema(name: string, domain: string): string {
 raw/                  # Immutable source documents (paste originals here)
   assets/             # Downloaded images and files
 wiki/                 # LLM-generated pages (all knowledge lives here)
-  index.md            # Master index of all pages
-  log.md              # Chronological activity log
+  index.md            # Master index of all pages (updated by wiki write)
   entities/           # People, orgs, products
   concepts/           # Ideas, frameworks, theories
   sources/            # One summary per ingested source
@@ -66,35 +57,17 @@ Page content here. Use [[wikilinks]] to connect pages.
 wiki init [dir] --name <name> --domain <domain>      # Create new wiki (local files only)
 wiki registry                                       # List all wikis
 wiki use [wiki-id]                                  # Set active wiki
-wiki profile show | use <slug> | clear              # Storage profile under profiles/<slug>/
 \`\`\`
 
 ### Reading & Writing
 \`\`\`bash
-wiki read <path>                                    # Print page to stdout
-wiki write <path> <<'EOF'                           # Write page (create/overwrite)
-content here
-EOF
-wiki write <path> --from-frontmatter [--log-type T] <<'EOF'   # Same + index (and optional log from YAML title)
----
-title: Page Title
----
-body
-EOF
-wiki append <path> <<'EOF'                          # Append to page
-additional content
-EOF
+wiki read <path>                                    # Print page markdown to stdout
+wiki write <path> <<'JSON'                          # JSON on stdin → YAML frontmatter + body; upserts wiki/index.md
+{"title":"…","content":"…"}
+JSON
+wiki delete <path>                                  # Delete page and remove from index
 wiki list [dir] [--tree] [--json]                   # List pages
 wiki search <query> [--limit N] [--all] [--json]    # Search pages
-\`\`\`
-
-### Index & Log
-\`\`\`bash
-wiki index show                                     # Print master index
-wiki index add <path> <summary>                     # Add entry to index
-wiki index remove <path>                            # Remove entry from index (no write shortcut)
-wiki log show [--last N] [--type T]                 # Print log entries
-wiki log append <type> <message>                    # Append log entry (e.g. query/maintenance without a new page)
 \`\`\`
 
 ### Version control and visualization (optional)
@@ -118,7 +91,7 @@ When ingesting a new source:
 3. Extract entities → create/update pages in \`wiki/entities/\`
 4. Extract concepts → create/update pages in \`wiki/concepts/\`
 5. If cross-cutting insights emerge → create \`wiki/synthesis/\` pages
-6. Update \`wiki/index.md\` and \`wiki/log.md\` — **prefer** \`wiki write <path> --from-frontmatter\` (and optional \`--log-type\`) on each new page that has YAML \`title\`, so index/log stay in sync with the file write. Otherwise use \`wiki index add\` / \`wiki log append\`, or \`wiki index remove\` / \`wiki log append\` when there is no new page (queries, maintenance).
+6. For each new or updated page under \`wiki/\`, use \`wiki write <path>\` with JSON on stdin — the CLI writes YAML frontmatter plus body and **upserts** \`wiki/index.md\` automatically.
 7. Version changes with Git or another tool outside the CLI if you need history
 
 ## Query Workflow
@@ -129,7 +102,7 @@ When answering a question using the wiki:
 2. \`wiki read <path>\` to read promising results
 3. Follow [[wikilinks]] to gather connected knowledge
 4. Synthesize answer from wiki content
-5. Log the query: \`wiki log append query "<question summary>"\`
+5. Optional: track queries in your own notes outside the CLI (there is no activity log command).
 
 ## Lint Workflow
 
@@ -139,18 +112,17 @@ Periodically check wiki health:
 2. Fix broken links by creating missing pages or updating references
 3. Connect orphan pages by adding wikilinks from related pages
 4. Add frontmatter to pages missing it
-5. Log maintenance in \`wiki log append\` as usual after fixes
+5. Re-run \`wiki lint\` until clean
 
 ## Conventions
 
 1. File names use kebab-case: \`my-topic-name.md\`
 2. One topic per file. Split large topics into sub-topics.
-3. Always update index.md when adding/removing pages (often via \`wiki write --from-frontmatter\` or \`wiki index add\` / \`wiki index remove\`).
-4. Always append to log.md when making changes (\`wiki write\` flags or \`wiki log append\`).
-5. Use [[wikilinks]] to connect related pages.
-6. Prefer concrete examples over abstract descriptions.
-7. Include the source of knowledge when possible.
-8. Use callouts for important notes:
+3. Adding or updating pages under \`wiki/\` via \`wiki write\` keeps \`wiki/index.md\` in sync; use \`wiki delete\` when removing pages.
+4. Use [[wikilinks]] to connect related pages.
+5. Prefer concrete examples over abstract descriptions.
+6. Include the source of knowledge when possible.
+7. Use callouts for important notes:
    - \`> [!NOTE]\` for general notes
    - \`> [!WARNING]\` for contradictions or caveats
    - \`> [!TIP]\` for best practices
@@ -167,14 +139,6 @@ export function getDefaultIndex(): string {
 ## Concepts
 
 ## Synthesis
-`;
-}
-
-export function getDefaultLog(): string {
-  const now = new Date().toISOString().replace("T", " ").replace(/\.\d+Z$/, "");
-  return `# Activity Log
-
-## [${now}] init | Wiki initialized
 `;
 }
 

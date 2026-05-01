@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdir, readdir, stat } from "fs/promises";
+import { readFile, writeFile, mkdir, readdir, stat, unlink } from "fs/promises";
 import { join, relative, dirname } from "path";
 import type { StorageProvider } from "../types.ts";
 
@@ -37,6 +37,10 @@ export class WikiManager implements StorageProvider {
     const separator = existing.endsWith("\n") ? "" : "\n";
     await writeFile(fullPath, existing + separator + content, "utf-8");
     return true;
+  }
+
+  async deletePage(relativePath: string): Promise<void> {
+    await unlink(this.resolve(relativePath));
   }
 
   async pageExists(relativePath: string): Promise<boolean> {

@@ -30,7 +30,7 @@ while not done:
 The set of actions available to the agent. Common tools:
 - Web search / browser
 - Code interpreter / REPL
-- File read/write (e.g. `wiki read`, `wiki write`)
+- File read/write (e.g. `wiki read`, `wiki write` with JSON on stdin)
 - API calls
 
 ### Termination
@@ -50,6 +50,6 @@ The most widely-used agent loop variant is ReAct (Reasoning + Acting), from [[so
 | Over-planning | Too much thinking, too little acting | Temperature tuning, step limits |
 
 > [!TIP]
-> llmwiki-cli is designed to be a tool inside an agent loop: the agent calls `wiki search`, `wiki read`, and `wiki write` as actions, using the wiki as its external long-term memory.
+> llmwiki-cli is designed to be a tool inside an agent loop: the agent calls `wiki search`, `wiki read`, and `wiki write` (JSON body) as actions, using the wiki as its external long-term memory.
 
 See [[synthesis/ai-agent-patterns]] for patterns that have emerged in production agent systems.

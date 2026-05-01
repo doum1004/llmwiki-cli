@@ -45,6 +45,8 @@ export function makeLintCommand(): Command {
         const content = await ctx.provider.readPage(page);
         if (!content) continue;
 
+        if (page === "wiki/index.md") continue;
+
         if (!hasFrontmatter(content)) {
           issues.push({
             type: "missing-frontmatter",
@@ -67,7 +69,7 @@ export function makeLintCommand(): Command {
       const indexMgr = new IndexManager(ctx.provider);
       const indexContent = await indexMgr.read();
       for (const page of pages) {
-        if (page === "wiki/index.md" || page === "wiki/log.md") continue;
+        if (page === "wiki/index.md") continue;
         if (!page.startsWith("wiki/")) continue;
         if (!(await indexMgr.hasEntry(page))) {
           issues.push({

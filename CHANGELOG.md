@@ -2,6 +2,24 @@
 
 <!-- New entries are prepended automatically by the publish workflow -->
 
+=======
+
+## v1.0.0 — 2026-04-30
+
+### Breaking
+
+- **`wiki write`** now expects **JSON on stdin** (not markdown). Required keys: `title`, `content`. Optional: `description`, `tags`, `source` (valid URL), `created`, `updated` (ISO dates). Unknown keys are rejected. The command writes YAML frontmatter plus the body from `content`, and **upserts** `wiki/index.md` for paths under `wiki/` (except `wiki/index.md`).
+- Removed **`wiki append`**, **`wiki index`**, **`wiki log`**, and **`wiki profile`**. Removed **`wiki/log.md`** from `wiki init`. No activity log feature.
+- **Storage profiles removed:** no `--profile`, no `LLMWIKI_PROFILE`, no `profile` in `.llmwiki.yaml`, no `profiles/<slug>/` roots in the CLI, no `storageProfiles` in the registry. All pages are read/written under the wiki root. Users who used profiles must move files out of `profiles/<slug>/` manually.
+- **`wiki status`** JSON no longer includes `recentActivity`.
+
+### Added
+
+- **`wiki delete <path>`** deletes the page file and removes its line from `wiki/index.md` when present.
+- **`StorageProvider.deletePage`** / **`WikiManager.deletePage`**.
+
+---
+
 ## v0.3.1 — 2026-04-30
 
 ### Changes
@@ -14,7 +32,6 @@
 **Full diff:** [v0.2.3...v0.3.1](https://github.com/doum1004/llmwiki-cli/compare/v0.2.3...v0.3.1)
 
 ---
-
 
 ## v0.3.0 — 2026-04-30
 

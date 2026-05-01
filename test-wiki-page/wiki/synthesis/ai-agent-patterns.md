@@ -53,11 +53,13 @@ Draft answer → Critique(draft) → Revised answer → Critique(revised) → ..
 The [[agent-loop]] integrates with a persistent external memory (vector DB, structured wiki). After each session, key observations are written to memory; at the start of each session, relevant memories are retrieved.
 
 This is exactly what llmwiki-cli supports:
-- **Write**: `wiki write wiki/entities/new-finding.md`
+- **Write**: `wiki write wiki/entities/new-finding.md` with JSON on stdin (see `SCHEMA.md` in the wiki root)
 - **Retrieve**: `wiki search "relevant topic"`
-- **Connect**: add `[[wikilinks]]` to create a knowledge graph
+- **Connect**: add wikilinks between pages to build a knowledge graph
 
 Using [[retrieval-augmented-generation]] within the agent loop transforms the agent from a stateless responder to a system that accumulates expertise over time.
+
+Demo wiki conventions and JSON write examples: [[SCHEMA.md]].
 
 ## Key Failure Modes Across All Patterns
 

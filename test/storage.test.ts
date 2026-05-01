@@ -31,16 +31,15 @@ describe("createProvider", () => {
     expect(provider.readPage).toBeInstanceOf(Function);
     expect(provider.writePage).toBeInstanceOf(Function);
     expect(provider.appendPage).toBeInstanceOf(Function);
+    expect(provider.deletePage).toBeInstanceOf(Function);
     expect(provider.pageExists).toBeInstanceOf(Function);
     expect(provider.listPages).toBeInstanceOf(Function);
   });
 
-  it("filesystem provider with storageProfile writes under profiles/slug", async () => {
-    const provider = await createProvider(makeConfig(), testDir, {
-      storageProfile: "alice",
-    });
+  it("filesystem provider writes under wiki root", async () => {
+    const provider = await createProvider(makeConfig(), testDir);
     await provider.writePage("wiki/note.md", "scoped");
-    const full = join(testDir, "profiles", "alice", "wiki", "note.md");
+    const full = join(testDir, "wiki", "note.md");
     const content = await readFile(full, "utf-8");
     expect(content).toBe("scoped");
   });

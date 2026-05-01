@@ -7,7 +7,6 @@ import {
   getDefaultConfig,
   getDefaultSchema,
   getDefaultIndex,
-  getDefaultLog,
 } from "../lib/templates.ts";
 import type { RegistryEntry } from "../types.ts";
 
@@ -62,11 +61,6 @@ export function makeInitCommand(): Command {
           writeFile(
             resolve(targetDir, "wiki/index.md"),
             getDefaultIndex(),
-            "utf-8",
-          ),
-          writeFile(
-            resolve(targetDir, "wiki/log.md"),
-            getDefaultLog(),
             "utf-8",
           ),
         ]);

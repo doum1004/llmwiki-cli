@@ -3,7 +3,6 @@ import { join } from "path";
 import { readFile, writeFile, mkdir } from "fs/promises";
 import { homedir } from "os";
 import type { Registry, RegistryEntry } from "../types.ts";
-import { validateProfileSlug } from "./profile.ts";
 
 function getRegistryDir(): string {
   return process.env.LLMWIKI_CONFIG_DIR ?? join(homedir(), ".config", "llmwiki");
@@ -20,15 +19,10 @@ function emptyRegistry(): Registry {
 function normalizeRegistry(parsed: Registry | null): Registry {
   if (!parsed) return emptyRegistry();
   const wikis = parsed.wikis ?? {};
-  const out: Registry = {
+  return {
     wikis,
     default: parsed.default ?? null,
   };
-  const profiles = parsed.storageProfiles ?? {};
-  if (Object.keys(profiles).length > 0) {
-    out.storageProfiles = profiles;
-  }
-  return out;
 }
 
 export async function loadRegistry(): Promise<Registry> {
@@ -46,8 +40,7 @@ export async function loadRegistry(): Promise<Registry> {
 
 export async function saveRegistry(registry: Registry): Promise<void> {
   await mkdir(getRegistryDir(), { recursive: true });
-  const toSave = { ...registry };
-  const content = yaml.dump(toSave, { lineWidth: 120, sortKeys: false });
+  const content = yaml.dump(registry, { lineWidth: 120, sortKeys: false });
   await writeFile(getRegistryPath(), content, "utf-8");
 }
 
@@ -67,12 +60,6 @@ export async function removeFromRegistry(id: string): Promise<boolean> {
   const registry = await loadRegistry();
   if (!(id in registry.wikis)) return false;
   delete registry.wikis[id];
-  if (registry.storageProfiles && id in registry.storageProfiles) {
-    delete registry.storageProfiles[id];
-    if (Object.keys(registry.storageProfiles).length === 0) {
-      delete registry.storageProfiles;
-    }
-  }
   if (registry.default === id) {
     const ids = Object.keys(registry.wikis);
     registry.default = ids[0] ?? null;
@@ -85,34 +72,6 @@ export async function setDefault(id: string): Promise<boolean> {
   const registry = await loadRegistry();
   if (!(id in registry.wikis)) return false;
   registry.default = id;
-  await saveRegistry(registry);
-  return true;
-}
-
-export function getStorageProfile(registry: Registry, wikiId: string): string | undefined {
-  const v = registry.storageProfiles?.[wikiId];
-  return v?.trim() ? v.trim() : undefined;
-}
-
-/** Persist active storage profile for a registry wiki id. Pass null to remove. */
-export async function setStorageProfile(
-  wikiId: string,
-  profile: string | null,
-): Promise<boolean> {
-  const registry = await loadRegistry();
-  if (!(wikiId in registry.wikis)) return false;
-  if (profile === null) {
-    if (registry.storageProfiles && wikiId in registry.storageProfiles) {
-      delete registry.storageProfiles[wikiId];
-      if (Object.keys(registry.storageProfiles).length === 0) {
-        delete registry.storageProfiles;
-      }
-    }
-  } else {
-    const slug = validateProfileSlug(profile);
-    if (!registry.storageProfiles) registry.storageProfiles = {};
-    registry.storageProfiles[wikiId] = slug;
-  }
   await saveRegistry(registry);
   return true;
 }

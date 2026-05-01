@@ -66,4 +66,10 @@ describe("FilesystemProvider", () => {
     expect(pages).toContain("sub/child.md");
     expect(pages).not.toContain("root.md");
   });
+
+  it("deletePage removes file", async () => {
+    await provider.writePage("del.md", "x");
+    await provider.deletePage("del.md");
+    expect(await provider.pageExists("del.md")).toBe(false);
+  });
 });

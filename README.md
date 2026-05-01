@@ -23,8 +23,8 @@ LLM Agent (Claude Code / Codex)
 |
 | shells out to:
 |   $ wiki init my-wiki --name "Notes" --domain "machine learning"
-|   $ wiki write wiki/concepts/attention.md --from-frontmatter --log-type ingest <<'EOF' ... EOF
-|   $ wiki index remove "concepts/old.md"   # when needed; see wiki skill
+|   $ wiki write wiki/concepts/attention.md <<'EOF' ... JSON ... EOF
+|   $ wiki delete wiki/concepts/old.md
 |   $ wiki search "scaling laws"
 |   $ wiki lint
 |
@@ -50,18 +50,14 @@ This gives you two commands: `wiki` (primary, 4 chars) and `llmwiki` (fallback i
 # Create a new wiki
 wiki init my-wiki --name "My Notes" --domain "research"
 
-# Write a page and sync index + log from YAML title (recommended when you have frontmatter)
-wiki write wiki/concepts/attention.md --from-frontmatter --log-type ingest <<'EOF'
----
-title: Attention Mechanism
-created: 2025-01-20
-tags: [transformers, NLP]
----
-The attention mechanism allows models to focus on relevant parts of the input.
-See also [[transformers]] and [[self-attention]].
+# Write a page (JSON on stdin → YAML frontmatter + body; index updated automatically)
+wiki write wiki/concepts/attention.md <<'EOF'
+{
+  "title": "Attention Mechanism",
+  "tags": ["transformers", "NLP"],
+  "content": "The attention mechanism allows models to focus on relevant parts of the input.\nSee also [[transformers]] and [[self-attention]]."
+}
 EOF
-
-# Still use wiki index / wiki log for removals, show, log-only events (queries, maintenance), etc.
 
 # Search and lint
 wiki search "attention"
@@ -79,8 +75,7 @@ my-wiki/
 ├── raw/                   # Immutable source documents
 │   └── assets/            # Downloaded images
 └── wiki/                  # LLM-generated pages
-    ├── index.md           # Master index of all pages
-    ├── log.md             # Chronological activity log
+    ├── index.md           # Master index (updated by wiki write / delete)
     ├── entities/          # People, orgs, products
     ├── concepts/          # Ideas, frameworks, theories
     ├── sources/           # One summary per ingested source
@@ -89,7 +84,7 @@ my-wiki/
 
 Use normal Git in `my-wiki/` if you want version control. The CLI does not run `git init` for you.
 
-**Storage profiles:** `wiki profile use <slug>`, `--profile`, `LLMWIKI_PROFILE`, or top-level `profile` in `.llmwiki.yaml`. Pages live under `profiles/<slug>/` inside the wiki directory. This is organizational separation only, not OS or cryptographic isolation.
+All markdown pages are stored directly under the wiki root (no `profiles/<slug>/` indirection).
 
 ## Commands
 
@@ -98,27 +93,15 @@ Use normal Git in `my-wiki/` if you want version control. The CLI does not run `
 wiki init [dir] --name <name> --domain <domain>      # Create wiki (local files only)
 wiki registry                                       # List all wikis
 wiki use [wiki-id]                                  # Set active wiki
-wiki profile show                                   # Effective storage root and profile
-wiki profile use <slug>                             # Save profile in registry
-wiki profile clear                                  # Remove saved profile
 ```
 
 ### Reading & Writing
 ```bash
-wiki read <path>                                    # Print page to stdout
-wiki write <path> [--index-summary …] [--log-type … [--log-message …]] [--from-frontmatter]   # stdin; optional index + log; title from YAML when flag set
-wiki append <path>                                  # Append stdin to page
+wiki read <path>                                    # Print page markdown to stdout
+wiki write <path>                                   # JSON on stdin → frontmatter + body; upserts wiki/index.md for wiki/* paths
+wiki delete <path>                                  # Delete page + remove from index
 wiki list [dir] [--tree] [--json]                   # List pages
 wiki search <query> [--limit N] [--all] [--json]    # Search pages
-```
-
-### Index & Log
-```bash
-wiki index show                                     # Print master index
-wiki index add <path> <summary>                     # Add entry to index
-wiki index remove <path>                            # Remove entry
-wiki log show [--last N] [--type T]                 # Print log entries
-wiki log append <type> <message>                    # Append log entry
 ```
 
 ### Health & Links
@@ -140,26 +123,20 @@ The generated `SCHEMA.md` in each wiki contains complete instructions. Here are 
 
 ### Ingest a Source
 ```bash
-# Save raw source
+# Save raw source (JSON body — large string in "content")
 wiki write raw/paper.md <<'EOF'
-<paste full text of paper>
+{"title":"Paper — full text","content":"<paste full text of paper>"}
 EOF
 
-# Create structured summary
+# Create structured summary (index line uses title)
 wiki write wiki/sources/attention-paper.md <<'EOF'
----
-title: Attention Is All You Need
-created: 2025-01-20
-tags: [transformers, attention, NLP]
-source: https://arxiv.org/abs/1706.03762
----
-Summary of the attention paper...
-Links to [[transformers]] and [[self-attention]].
+{
+  "title": "Attention Is All You Need",
+  "tags": ["transformers", "attention", "NLP"],
+  "source": "https://arxiv.org/abs/1706.03762",
+  "content": "Summary of the attention paper...\nLinks to [[transformers]] and [[self-attention]]."
+}
 EOF
-
-# Update bookkeeping
-wiki index add "sources/attention-paper.md" "Attention Is All You Need (2017)"
-wiki log append ingest "Attention paper"
 ```
 
 ### Answer a Question
@@ -167,7 +144,6 @@ wiki log append ingest "Attention paper"
 wiki search "attention mechanism"
 wiki read wiki/concepts/attention.md
 wiki links wiki/concepts/attention.md    # see related pages
-wiki log append query "How does multi-head attention work?"
 ```
 
 ### Maintain Wiki Health

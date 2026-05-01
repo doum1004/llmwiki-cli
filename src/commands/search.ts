@@ -1,10 +1,9 @@
 import { Command } from "commander";
 import { search } from "../lib/search.ts";
-import { loadRegistry, getStorageProfile } from "../lib/registry.ts";
+import { loadRegistry } from "../lib/registry.ts";
 import { loadConfig } from "../lib/config.ts";
 import { createProvider } from "../lib/storage.ts";
-import { resolveStorageProfile } from "../lib/profile.ts";
-import type { GlobalOptions, WikiContext } from "../types.ts";
+import type { WikiContext } from "../types.ts";
 import type { SearchResult } from "../lib/search.ts";
 
 export function makeSearchCommand(): Command {
@@ -24,19 +23,10 @@ export function makeSearchCommand(): Command {
 
       if (options.all) {
         const registry = await loadRegistry();
-        const globalOpts = this.optsWithGlobals<GlobalOptions>();
         for (const [id, entry] of Object.entries(registry.wikis)) {
           const config = await loadConfig(entry.path);
           if (!config) continue;
-          const { profile } = resolveStorageProfile({
-            envValue: process.env.LLMWIKI_PROFILE,
-            cliValue: globalOpts.profile,
-            registryValue: getStorageProfile(registry, id),
-            configValue: config.profile,
-          });
-          const wiki = await createProvider(config, entry.path, {
-            storageProfile: profile,
-          });
+          const wiki = await createProvider(config, entry.path);
           const hits = await search(wiki, query, { limit });
           for (const hit of hits) {
             results.push({ ...hit, wiki: id });
